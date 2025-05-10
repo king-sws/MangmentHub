@@ -1,6 +1,4 @@
-// components/subscription/StripeCheckout.tsx
 "use client";
-
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { loadStripe } from '@stripe/stripe-js';
@@ -33,7 +31,6 @@ export default function StripeCheckout({ plan, onSuccess, onCancel }: StripeChec
           },
           body: JSON.stringify({ plan }),
         });
-
         if (response.ok) {
           router.refresh();
           onSuccess?.();
@@ -61,20 +58,26 @@ export default function StripeCheckout({ plan, onSuccess, onCancel }: StripeChec
         body: JSON.stringify({ plan }),
       });
 
-      const session = await response.json();
-      
       if (!response.ok) {
-        throw new Error(session.error || 'Failed to create checkout session');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create checkout session');
       }
 
+      const session = await response.json();
+      
       // Redirect to Stripe Checkout
       const stripe = await stripePromise;
-      const { error } = await stripe!.redirectToCheckout({
+      if (!stripe) {
+        throw new Error('Stripe failed to load');
+      }
+      
+      const { error } = await stripe.redirectToCheckout({
         sessionId: session.id,
       });
-
+      
       if (error) {
         console.error('Stripe checkout error:', error);
+        throw error;
       }
     } catch (error) {
       console.error('Payment error:', error);
@@ -84,19 +87,19 @@ export default function StripeCheckout({ plan, onSuccess, onCancel }: StripeChec
   };
 
   return (
-    <button 
+    <button
       onClick={handleSubscribe}
       disabled={isLoading}
       className={`mt-4 px-4 py-2 rounded-lg font-medium transition ${
-        isLoading ? 'bg-gray-300 cursor-not-allowed' : plan === 'FREE' 
-          ? 'bg-gray-200 hover:bg-gray-300 text-gray-800' 
+        isLoading ? 'bg-gray-300 cursor-not-allowed' : plan === 'FREE'
+          ? 'bg-gray-200 hover:bg-gray-300 text-gray-800'
           : 'bg-blue-600 hover:bg-blue-700 text-white'
       }`}
     >
-      {isLoading 
-        ? 'Processing...' 
-        : plan === 'FREE' 
-          ? 'Switch to Free Plan' 
+      {isLoading
+        ? 'Processing...'
+        : plan === 'FREE'
+          ? 'Switch to Free Plan'
           : `Subscribe for $${price.toFixed(2)}/month`}
     </button>
   );

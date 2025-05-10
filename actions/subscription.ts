@@ -35,6 +35,7 @@ export async function getCurrentSubscription() {
 }
 
 // Create a Stripe checkout session for subscription
+// Create a Stripe checkout session for subscription
 export async function createSubscriptionCheckout(plan: PlanType) {
   const session = await auth();
  
@@ -55,6 +56,10 @@ export async function createSubscriptionCheckout(plan: PlanType) {
       returnUrl: `${process.env.NEXT_PUBLIC_APP_URL}/settings/subscription`,
     });
     
+    if (!checkoutSession || !checkoutSession.sessionId) {
+      throw new Error("Failed to create checkout session");
+    }
+    
     return { 
       success: true, 
       sessionId: checkoutSession.sessionId,
@@ -62,7 +67,7 @@ export async function createSubscriptionCheckout(plan: PlanType) {
     };
   } catch (error) {
     console.error("Failed to create checkout session:", error);
-    throw new Error("Failed to create checkout session");
+    throw new Error(`Failed to create checkout session: ${(error as Error).message}`);
   }
 }
 

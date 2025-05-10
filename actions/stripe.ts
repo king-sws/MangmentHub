@@ -20,8 +20,8 @@ export async function createCheckoutSession({
   // Map your plan names to Stripe price IDs
   // These IDs should be created in your Stripe dashboard
   const PRICE_IDS: { [key: string]: string } = {
-    PRO: process.env.STRIPE_PRICE_PRO!,
-    BUSINESS: process.env.STRIPE_PRICE_BUSINESS!,
+    PRO: process.env.STRIPE_PRICE_ID_PRO!,
+    BUSINESS: process.env.STRIPE_PRICE_ID_BUSINESS!,
   };
 
   const priceId = PRICE_IDS[plan];

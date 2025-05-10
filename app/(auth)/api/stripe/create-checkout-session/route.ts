@@ -1,4 +1,3 @@
-// app/api/stripe/create-checkout-session/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
@@ -24,7 +23,7 @@ const checkoutSchema = z.object({
 export async function POST(req: NextRequest) {
   try {
     const session = await auth();
-    
+   
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -47,10 +46,10 @@ export async function POST(req: NextRequest) {
     // Parse and validate request body
     const body = await req.json();
     const { plan } = checkoutSchema.parse(body);
-    
+   
     // Get Stripe price ID for the selected plan
     const priceId = STRIPE_PRICE_IDS[plan];
-    
+   
     if (!priceId) {
       return NextResponse.json(
         { error: "Invalid plan selected" },
@@ -60,7 +59,7 @@ export async function POST(req: NextRequest) {
 
     // Create or retrieve Stripe customer
     let customerId = user.stripeCustomerId;
-    
+   
     if (!customerId) {
       const customer = await stripe.customers.create({
         email: user.email,
@@ -69,9 +68,9 @@ export async function POST(req: NextRequest) {
           userId: user.id,
         },
       });
-      
+     
       customerId = customer.id;
-      
+     
       // Save Stripe customer ID to user record
       await prisma.user.update({
         where: { id: user.id },
@@ -98,17 +97,22 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return NextResponse.json({ id: checkoutSession.id });
+    // Return the full session ID for client-side redirection
+    return NextResponse.json({ 
+      id: checkoutSession.id,
+      url: checkoutSession.url 
+    });
+    
   } catch (error) {
     console.error("Stripe checkout error:", error);
-    
+   
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: "Validation error", details: error.errors },
         { status: 400 }
       );
     }
-    
+   
     return NextResponse.json(
       { error: "Failed to create checkout session" },
       { status: 500 }
