@@ -1,5 +1,6 @@
-// Plan features and limits
+// lib/plans.ts
 
+// Plan types and limits
 export type PlanType = 'FREE' | 'PRO' | 'BUSINESS';
 
 // Define workspace limits per plan
@@ -90,6 +91,7 @@ export function getEffectivePlan(plan: PlanType, planExpires: Date | null): Plan
   if (plan === 'FREE' || isPlanActive(planExpires)) {
     return plan;
   }
+  
   // If paid plan has expired, return FREE
   return 'FREE';
 }

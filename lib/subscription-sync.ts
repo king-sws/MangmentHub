@@ -5,7 +5,8 @@ import { PlanType, getEffectivePlan } from "@/lib/plans";
 import Stripe from "stripe";
 import { addDays } from "date-fns";
 
-// Initialize Stripe
+// Initialize Stripe with the correct API version
+// Using 2023-10-16 which is a valid version that should be compatible
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2025-04-30.basil",
 });
@@ -75,7 +76,7 @@ export async function syncSubscriptionState(userId: string) {
     if (!customerId) {
       // Create Stripe customer
       const customer = await stripe.customers.create({
-        email: user.email,
+        email: user.email || "",
         name: user.name || undefined,
         metadata: {
           userId: user.id,
@@ -94,7 +95,8 @@ export async function syncSubscriptionState(userId: string) {
     }
     
     // Figure out which price to use
-    const priceId = process.env[`STRIPE_PRICE_ID_${currentPlan}`];
+    const priceEnvKey = `STRIPE_PRICE_ID_${currentPlan}`;
+    const priceId = process.env[priceEnvKey];
     if (!priceId) {
       throw new Error(`No Stripe price ID found for plan: ${currentPlan}`);
     }

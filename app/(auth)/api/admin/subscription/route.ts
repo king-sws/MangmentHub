@@ -49,7 +49,6 @@ export async function POST(req: NextRequest) {
     }
     
     return NextResponse.json({ success: true, result });
-    
   } catch (error) {
     console.error("Admin subscription error:", error);
     
@@ -103,7 +102,6 @@ export async function GET(req: NextRequest) {
     }
     
     return NextResponse.json({ success: true, user });
-    
   } catch (error) {
     console.error("Admin subscription check error:", error);
     return NextResponse.json(

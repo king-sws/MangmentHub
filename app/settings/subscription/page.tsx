@@ -5,7 +5,6 @@ import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { PlanType, getEffectivePlan, isPlanActive } from '@/lib/plans';
 import { format } from 'date-fns';
-import { DashboardSidebar } from "@/app/dashboard/[userId]/_components/sidebar"; // Add this import
 import PlanSelector from '@/components/subscription/PalnSelector';
 
 async function SubscriptionDetails() {
@@ -40,16 +39,7 @@ async function SubscriptionDetails() {
   return (
     <div className="flex min-h-screen bg-gray-50">
       {/* Pass the full user object with all required props */}
-      <DashboardSidebar user={{
-        id: user.id,
-        name: user.name || '',
-        email: user.email || '',
-        image: user.image || undefined,
-        plan: user.plan as PlanType,
-        planExpires: user.planExpires
-      }} />
-      
-      <div className="flex-1 p-6 lg:ml-64">
+      <div className="flex-1 p-6 mx-auto">
         <div className="max-w-4xl mx-auto">
           <div className="mb-8">
             <h1 className="text-3xl font-bold mb-2">Subscription Settings</h1>
