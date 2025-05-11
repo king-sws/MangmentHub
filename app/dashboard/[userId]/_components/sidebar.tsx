@@ -1,7 +1,8 @@
 "use client";
 
 import {
-  LayoutDashboard, FolderKanban, Users, Calendar, BarChart3, Settings, Menu, Plus
+  LayoutDashboard, FolderKanban, Users, Calendar, BarChart3, Settings, Menu, Plus,
+  Star, Laptop, ChevronRight, ChevronDown, LogOut
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -20,6 +21,8 @@ import { PlanType } from '@/lib/plans';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface DashboardSidebarProps {
   user: {
@@ -36,12 +39,49 @@ interface DashboardSidebarProps {
 const WorkspaceSkeleton = () => (
   <div className="flex items-center justify-between py-2 px-3 rounded-md">
     <div className="flex items-center gap-2 flex-1">
-      <Skeleton className="h-4 w-4 rounded" />
-      <Skeleton className="h-4 w-24" />
+      <Skeleton className="h-5 w-5 rounded" />
+      <Skeleton className="h-4 w-28" />
     </div>
     <Skeleton className="h-6 w-6 rounded" />
   </div>
 );
+
+// A component for the workspace item
+const WorkspaceItem = ({ 
+  workspace, 
+  isActive, 
+  onAction 
+}: { 
+  workspace: Workspace; 
+  isActive: boolean; 
+  onAction: () => void;
+}) => {
+  return (
+    <div
+      className={cn(
+        "flex items-center justify-between py-2 px-3 rounded-md group transition-all hover:bg-primary/5",
+        isActive ? "bg-primary/10 text-primary" : "text-gray-700"
+      )}
+    >
+      <Link
+        href={`/workspace/${workspace.id}`}
+        className="flex items-center gap-2 text-sm flex-1 truncate"
+      >
+        <div className="bg-primary/10 text-primary p-1 rounded flex items-center justify-center">
+          <FolderKanban className="h-4 w-4" />
+        </div>
+        <span className={cn("truncate", isActive && "font-medium")}>{workspace.name}</span>
+      </Link>
+
+      <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+        <WorkspaceActions 
+          workspace={workspace} 
+          onAction={onAction}
+        />
+      </div>
+    </div>
+  );
+};
 
 export function DashboardSidebar({ user }: DashboardSidebarProps) {
   const pathname = usePathname();
@@ -50,6 +90,7 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isWorkspacesExpanded, setIsWorkspacesExpanded] = useState(true);
 
   // Subscription state
   const [subscription, setSubscription] = useState<{
@@ -67,26 +108,40 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
   // Create a function to fetch workspaces that can be called whenever needed
   const fetchWorkspaces = useCallback(async () => {
     try {
-      setIsLoading(true); // Set loading to true before fetching
+      setIsLoading(true);
       const data = await getWorkspaces();
       setWorkspaces(data);
+      
+      // Update subscription state with current plan information
+      const effectivePlan = getEffectivePlan(user.plan, user.planExpires);
+      const limit = getWorkspaceLimit(effectivePlan);
+      
+      setSubscription(prev => ({
+        ...prev,
+        plan: user.plan,
+        planExpires: user.planExpires,
+        workspaceLimit: limit,
+        canCreate: data.length < limit
+      }));
     } catch (error) {
       console.error('Failed to fetch workspaces', error);
     } finally {
-      setIsLoading(false); // Set loading to false when done
+      setIsLoading(false);
     }
-  }, []);
+  }, [user.plan, user.planExpires]);
 
   // Add workspace limit check
   useEffect(() => {
     const checkWorkspaceLimit = async () => {
       try {
         const currentWorkspaces = workspaces.length;
-        const effectivePlan = getEffectivePlan(subscription.plan, subscription.planExpires);
+        const effectivePlan = getEffectivePlan(user.plan, user.planExpires);
         const limit = getWorkspaceLimit(effectivePlan);
         
         setSubscription(prev => ({
           ...prev,
+          plan: user.plan,
+          planExpires: user.planExpires,
           workspaceLimit: limit,
           canCreate: currentWorkspaces < limit
         }));
@@ -96,7 +151,7 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
     };
 
     checkWorkspaceLimit();
-  }, [workspaces.length, subscription.plan, subscription.planExpires]);
+  }, [workspaces.length, user.plan, user.planExpires]);
 
   // Function to refresh data after workspace actions
   const refreshWorkspaces = useCallback(() => {
@@ -107,7 +162,7 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const refreshSidebar = useCallback(() => {
     router.refresh();
-    fetchWorkspaces(); // Also refresh workspaces directly
+    fetchWorkspaces();
   }, [router, fetchWorkspaces]);
   
   // Add a new workspace to state without refetching all workspaces
@@ -137,7 +192,7 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
       icon: FolderKanban,
     },
     {
-      href: `/dashboard/${user.id}/team`,
+      href: `/dashboard/${user.id}/teams`,
       label: 'Team',
       icon: Users,
     },
@@ -160,52 +215,100 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
 
   // Workspaces section header component
   const WorkspacesHeader = () => (
-    <div className="flex justify-between items-center mb-2 px-3 text-xs font-semibold text-gray-400 uppercase">
+    <div 
+      className="flex justify-between items-center mb-2 px-3 text-xs font-semibold text-gray-500 uppercase cursor-pointer"
+      onClick={() => setIsWorkspacesExpanded(!isWorkspacesExpanded)}
+    >
       <div className="flex items-center gap-2">
+        {isWorkspacesExpanded ? (
+          <ChevronDown className="h-3 w-3" />
+        ) : (
+          <ChevronRight className="h-3 w-3" />
+        )}
         <span>Workspaces</span>
-        <Badge variant="outline" className="border-primary/20 text-xs">
+        <Badge variant="outline" className="border-primary/30 text-xs bg-primary/5 text-primary">
           {subscription.plan}
         </Badge>
-        <span className="text-muted-foreground">
+        <span className="text-primary font-bold">
           {workspaces.length}/{subscription.workspaceLimit === Infinity ? '∞' : subscription.workspaceLimit}
         </span>
       </div>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-6 w-6 p-1"
-        onClick={() => {
-          if (!subscription.canCreate) {
-            router.push('/settings/subscription');
-          } else {
-            setIsAddDialogOpen(true);
-          }
-        }}
-        disabled={!subscription.canCreate}
-      >
-        <Plus className="h-4 w-4" />
-      </Button>
+
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 p-1 hover:bg-primary/10 hover:text-primary"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!subscription.canCreate) {
+                  router.push('/settings/subscription');
+                } else {
+                  setIsAddDialogOpen(true);
+                }
+              }}
+              disabled={!subscription.canCreate}
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            {subscription.canCreate ? "Add workspace" : "Upgrade to add more workspaces"}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     </div>
   );
 
   // Empty workspaces state component
   const EmptyWorkspaceState = () => (
-    <div className="text-sm text-gray-500 px-3 py-2">
+    <div className="text-sm text-gray-500 px-3 py-4 flex flex-col items-center justify-center space-y-2 border border-dashed rounded-md mx-1 bg-gray-50">
       {subscription.canCreate ? (
-        "No workspaces yet. Create one!"
-      ) : (
-        <Alert variant="destructive" className="p-2 text-xs">
-          Workspace limit reached ({subscription.workspaceLimit}).{' '}
-          <Link
-            href="/settings/subscription"
-            className="font-medium underline hover:text-primary"
+        <>
+          <div className="p-2 bg-primary/10 rounded-full">
+            <FolderKanban className="h-5 w-5 text-primary" />
+          </div>
+          <p className="text-center">No workspaces yet</p>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="mt-1 border-primary/20 text-primary hover:bg-primary/5"
+            onClick={() => setIsAddDialogOpen(true)}
           >
-            Upgrade plan
-          </Link>
+            <Plus className="h-4 w-4 mr-1" /> Create workspace
+          </Button>
+        </>
+      ) : (
+        <Alert variant="destructive" className="p-3 text-xs">
+          <div className="flex flex-col items-center space-y-2">
+            <p>Workspace limit reached ({subscription.workspaceLimit})</p>
+            <Link
+              href="/settings/subscription"
+              className="font-medium underline hover:text-primary"
+            >
+              Upgrade your plan
+            </Link>
+          </div>
         </Alert>
       )}
     </div>
   );
+
+  // Calculate plan tier colors
+  const getPlanColors = () => {
+    switch (subscription.plan) {
+      case 'FREE':
+        return 'bg-gray-100 text-gray-700';
+      case 'PRO':
+        return 'bg-blue-100 text-blue-700';
+      case 'BUSINESS':
+        return 'bg-purple-100 text-purple-700';
+      default:
+        return 'bg-gray-100 text-gray-700';
+    }
+  };
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
@@ -213,9 +316,9 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
       <div className="h-16 flex items-center px-4 border-b">
         <Link href={`/dashboard/${user.id}`} className="flex items-center gap-3">
           <div className="h-9 w-9 rounded-md bg-primary flex items-center justify-center text-white shadow-sm">
-            {user.name?.[0]?.toUpperCase() || 'M'}
+            <Laptop className="h-5 w-5" />
           </div>
-          <span className="font-semibold text-lg">ManageHub</span>
+          <span className="font-bold text-lg">ManageHub</span>
         </Link>
       </div>
 
@@ -229,16 +332,21 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
                 key={link.href}
                 href={link.href}
                 className={cn(
-                  'flex items-center gap-3 py-2 px-3 rounded-md transition-colors',
+                  'flex items-center gap-3 py-2 px-3 rounded-md transition-all hover:bg-gray-100',
                   isActive
                     ? 'bg-primary/10 text-primary font-medium'
-                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                    : 'text-gray-700 hover:text-gray-900'
                 )}
               >
-                <link.icon className={cn(
-                  "h-5 w-5",
-                  isActive ? "text-primary" : "text-muted-foreground"
-                )} />
+                <div className={cn(
+                  "p-1 rounded",
+                  isActive ? "bg-primary/10" : "bg-transparent"
+                )}>
+                  <link.icon className={cn(
+                    "h-4 w-4",
+                    isActive ? "text-primary" : "text-muted-foreground"
+                  )} />
+                </div>
                 <span className="text-sm">{link.label}</span>
               </Link>
             );
@@ -247,73 +355,88 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
           {/* Workspaces section */}
           <div className="mt-8">
             <WorkspacesHeader />
-            <div className="space-y-1">
-              {/* Show skeletons when loading */}
-              {isLoading ? (
-                // Show 3 skeleton items while loading
-                <>
-                  <WorkspaceSkeleton />
-                  <WorkspaceSkeleton />
-                  <WorkspaceSkeleton />
-                </>
-              ) : workspaces.length > 0 ? (
-                // Show actual workspaces when loaded
-                workspaces.map((workspace) => {
-                  const isWorkspaceActive = pathname.includes(`/workspace/${workspace.id}`);
-                  return (
-                    <div
-                      key={workspace.id}
-                      className={`flex items-center justify-between py-2 px-3 rounded-md hover:bg-gray-100 ${isWorkspaceActive ? "bg-gray-100" : ""}`}
-                    >
-                      <Link
-                        href={`/workspace/${workspace.id}`}
-                        className="flex items-center gap-2 text-sm flex-1 truncate"
-                      >
-                        <FolderKanban className="h-4 w-4" />
-                        <span className="truncate">{workspace.name}</span>
-                      </Link>
-
-                      {/* Pass the refreshWorkspaces function to the WorkspaceActions component */}
-                      <WorkspaceActions 
-                        workspace={workspace} 
+            {isWorkspacesExpanded && (
+              <div className="space-y-1 mt-2">
+                {/* Show skeletons when loading */}
+                {isLoading ? (
+                  // Show 3 skeleton items while loading
+                  <>
+                    <WorkspaceSkeleton />
+                    <WorkspaceSkeleton />
+                    <WorkspaceSkeleton />
+                  </>
+                ) : workspaces.length > 0 ? (
+                  // Show actual workspaces when loaded
+                  workspaces.map((workspace) => {
+                    const isWorkspaceActive = pathname.includes(`/workspace/${workspace.id}`);
+                    return (
+                      <WorkspaceItem
+                        key={workspace.id}
+                        workspace={workspace}
+                        isActive={isWorkspaceActive}
                         onAction={refreshWorkspaces}
                       />
-                    </div>
-                  );
-                })
-              ) : (
-                // Show message when no workspaces are available
-                <EmptyWorkspaceState />
-              )}
-            </div>
+                    );
+                  })
+                ) : (
+                  // Show message when no workspaces are available
+                  <EmptyWorkspaceState />
+                )}
+              </div>
+            )}
           </div>
         </nav>
       </div>
 
       {/* User Profile Area */}
       <div className="p-4 border-t mt-auto bg-gray-50">
-        <div className="flex items-center gap-3">
-          <Avatar className="h-9 w-9 border-2 border-white shadow-sm">
-            <AvatarImage src={user.image} alt={user.name} />
-            <AvatarFallback className="bg-primary text-white">
-              {user.name?.[0]?.toUpperCase() || 'U'}
-            </AvatarFallback>
-          </Avatar>
-          <div className="overflow-hidden flex-1">
-            <p className="text-sm font-medium truncate">{user.name}</p>
-            <p className="text-xs text-gray-500 truncate">{user.email}</p>
-            <div className="flex items-center gap-1 mt-1">
-              <Badge variant="outline" className="text-xs border-primary/20">
-                {subscription.plan}
-              </Badge>
-              {subscription.planExpires && (
-                <span className="text-[0.7rem] text-muted-foreground">
-                  Renews {format(new Date(subscription.planExpires), 'MMM d')}
-                </span>
-              )}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <div className="flex items-center gap-3 cursor-pointer p-1 rounded-lg hover:bg-gray-100 transition-colors">
+              <Avatar className="h-10 w-10 border-2 border-white shadow-sm">
+                <AvatarImage src={user.image} alt={user.name} />
+                <AvatarFallback className="bg-primary text-white">
+                  {user.name?.[0]?.toUpperCase() || 'U'}
+                </AvatarFallback>
+              </Avatar>
+              <div className="overflow-hidden flex-1">
+                <p className="text-sm font-medium truncate">{user.name}</p>
+                <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                <div className="flex items-center gap-1 mt-1">
+                  <Badge variant="outline" className={cn("text-xs px-2 py-0", getPlanColors())}>
+                    {subscription.plan}
+                  </Badge>
+                  {subscription.planExpires && (
+                    <span className="text-[0.7rem] text-muted-foreground">
+                      Renews {format(new Date(subscription.planExpires), 'MMM d')}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <ChevronRight className="h-4 w-4 text-gray-400" />
             </div>
-          </div>
-        </div>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem 
+              className="cursor-pointer"
+              onClick={() => router.push(`/dashboard/${user.id}/profile`)}
+            >
+              <Users className="h-4 w-4 mr-2" /> Profile
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+              className="cursor-pointer"
+              onClick={() => router.push('/settings/subscription')}
+            >
+              <Star className="h-4 w-4 mr-2" /> Subscription
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+              className="cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50"
+              onClick={() => router.push('/logout')}
+            >
+              <LogOut className="h-4 w-4 mr-2" /> Logout
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   );
@@ -334,7 +457,7 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
 
       {/* Mobile Sidebar */}
       <Sheet open={isMobileOpen} onOpenChange={setIsMobileOpen}>
-        <SheetContent side="left" className="w-64 p-0" title="Sidebar">
+        <SheetContent side="left" className="w-72 p-0" title="Sidebar">
           <div className="flex justify-end p-2 lg:hidden">
             <SheetClose asChild />
           </div>
@@ -343,7 +466,7 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
       </Sheet>
 
       {/* Desktop Sidebar */}
-      <aside className="fixed left-0 top-0 hidden lg:block h-full w-64 border-r border-gray-200 bg-white z-40">
+      <aside className="fixed left-0 top-0 hidden lg:block h-full w-64 border-r border-gray-200 bg-white z-40 shadow-sm">
         <SidebarContent />
       </aside>
 
