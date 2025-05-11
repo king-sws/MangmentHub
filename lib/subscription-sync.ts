@@ -5,10 +5,10 @@ import { PlanType, getEffectivePlan } from "@/lib/plans";
 import Stripe from "stripe";
 import { addDays } from "date-fns";
 
-// Initialize Stripe with the correct API version
-// Using 2023-10-16 which is a valid version that should be compatible
+// Initialize Stripe with a valid API version
+// Using a version that's compatible with Stripe library v18.1.0
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2025-04-30.basil",
+  apiVersion: "2023-10-16", // Changed from "2025-04-30.basil" to supported version
 });
 
 /**

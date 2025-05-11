@@ -7,6 +7,7 @@ import { PlanType, getEffectivePlan, isPlanActive } from '@/lib/plans';
 import { format } from 'date-fns';
 import PlanSelector from '@/components/subscription/PalnSelector';
 
+
 async function SubscriptionDetails({ params }: { params: { userId: string } }) {
   const session = await auth();
   

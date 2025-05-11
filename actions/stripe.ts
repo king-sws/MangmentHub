@@ -4,7 +4,7 @@ import Stripe from 'stripe';
 // Create a Stripe instance with your secret key
 // Use environment variable for security
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-04-30.basil', // Use the latest API version
+  apiVersion: '2023-10-16', // Changed from '2025-04-30.basil' to supported version
 });
 
 // Create a Checkout Session
@@ -23,13 +23,11 @@ export async function createCheckoutSession({
     PRO: process.env.STRIPE_PRICE_ID_PRO!,
     BUSINESS: process.env.STRIPE_PRICE_ID_BUSINESS!,
   };
-
   const priceId = PRICE_IDS[plan];
-  
+ 
   if (!priceId) {
     throw new Error(`Invalid plan: ${plan}`);
   }
-
   // Create Stripe checkout session
   const session = await stripe.checkout.sessions.create({
     client_reference_id: userId,
@@ -48,7 +46,6 @@ export async function createCheckoutSession({
       plan,
     },
   });
-
   return { sessionId: session.id, url: session.url };
 }
 
