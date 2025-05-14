@@ -128,7 +128,7 @@ export default function SignInPage() {
         <div className="absolute inset-0 bg-gradient-to-b from-primary to-secondary opacity-50" />
         <div className="flex items-center justify-center h-full">
             <Image
-              src="/auth-illustration-3.jpg"
+              src="/auth-illustration.jpg"
               alt="Auth Illustration"
               fill
               className="w-full h-auto "
