@@ -95,7 +95,7 @@ export function TasksTableMini({ userId, limit = 5 }: TasksTableMiniProps) {
     return (
       <div className="text-center py-8">
         <p className="text-muted-foreground mb-4">No upcoming tasks</p>
-        <Button asChild>
+        <Button className="bg-indigo-400 hover:bg-indigo-500" asChild>
           <Link href={`/dashboard/${userId}/tasks/new`}>
             Create a new task
           </Link>

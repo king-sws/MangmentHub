@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { SignOutButton } from '@/components/SignOutButton';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import Link from 'next/link';
 import Image from 'next/image';
 import axios from 'axios';
@@ -178,9 +179,9 @@ export default function Navbar({ user }: { user: any }) {
   };
 
   return (
-    <header className="sticky top-0 z-30 w-full bg-white border-b shadow-sm h-16 px-4 flex items-center justify-between">
+    <header className="sticky top-0 z-30 w-full bg-background border-b border-border shadow-sm h-16 px-4 flex items-center justify-between">
       <div className="flex items-center gap-3">
-        <Menu className="h-5 w-5 text-gray-500 lg:hidden" />
+        <Menu className="h-5 w-5 text-muted-foreground lg:hidden" />
         <Link href="/dashboard">
           <div className="flex items-center">
             <Image src="/logo-no-background.png" alt="Logo" width={132} height={132} className="h-6 w-6" />
@@ -189,6 +190,9 @@ export default function Navbar({ user }: { user: any }) {
       </div>
 
       <div className="flex items-center gap-3">
+        {/* Theme Toggle */}
+        <ThemeToggle />
+        
         {/* Notification Button with Dropdown */}
         <div className="relative" ref={notificationRef}>
           <Button 
@@ -207,15 +211,15 @@ export default function Navbar({ user }: { user: any }) {
 
           {/* Notification Dropdown */}
           {showNotifications && (
-            <div className="absolute right-0 mt-2 w-80 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
-              <div className="px-4 py-2 border-b border-gray-100 flex justify-between items-center">
+            <div className="absolute right-0 mt-2 w-80 bg-background rounded-md shadow-lg py-1 z-50 border border-border">
+              <div className="px-4 py-2 border-b border-border flex justify-between items-center">
                 <h3 className="text-sm font-semibold">Notifications</h3>
                 {unreadCount > 0 && (
                   <Button 
                     variant="ghost" 
                     size="sm" 
                     onClick={markAllAsRead}
-                    className="text-xs text-blue-600 hover:text-blue-800"
+                    className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                   >
                     Mark all as read
                   </Button>
@@ -224,16 +228,18 @@ export default function Navbar({ user }: { user: any }) {
               
               <div className="max-h-72 overflow-y-auto">
                 {loading ? (
-                  <div className="px-4 py-3 text-sm text-gray-500">Loading...</div>
+                  <div className="px-4 py-3 text-sm text-muted-foreground">Loading...</div>
                 ) : error ? (
-                  <div className="px-4 py-3 text-sm text-red-500">{error}</div>
+                  <div className="px-4 py-3 text-sm text-red-500">
+                    {error}
+                  </div>
                 ) : notifications.length === 0 ? (
-                  <div className="px-4 py-3 text-sm text-gray-500">No notifications</div>
+                  <div className="px-4 py-3 text-sm text-muted-foreground">No notifications</div>
                 ) : (
                   notifications.map((notification) => (
                     <div 
                       key={notification.id}
-                      className={`px-4 py-3 border-b border-gray-100 last:border-0 ${notification.isRead ? 'bg-white' : 'bg-blue-50'}`}
+                      className={`px-4 py-3 border-b border-border last:border-0 ${notification.isRead ? 'bg-background' : 'bg-blue-50 dark:bg-blue-900/20'}`}
                     >
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
@@ -252,7 +258,7 @@ export default function Navbar({ user }: { user: any }) {
                               <p className="text-sm">{notification.message}</p>
                             </>
                           )}
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-xs text-muted-foreground mt-1">
                             {formatTimeAgo(notification.createdAt)}
                           </p>
                         </div>
@@ -265,7 +271,7 @@ export default function Navbar({ user }: { user: any }) {
                               className="h-6 w-6"
                               onClick={(e) => markAsRead(notification.id, e)}
                             >
-                              <Check className="h-4 w-4 text-blue-600" />
+                              <Check className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                             </Button>
                           )}
                           <Button
@@ -274,7 +280,7 @@ export default function Navbar({ user }: { user: any }) {
                             className="h-6 w-6"
                             onClick={(e) => deleteNotification(notification.id, e)}
                           >
-                            <Trash2 className="h-4 w-4 text-gray-400 hover:text-red-500" />
+                            <Trash2 className="h-4 w-4 text-muted-foreground hover:text-red-500" />
                           </Button>
                         </div>
                       </div>
@@ -283,10 +289,10 @@ export default function Navbar({ user }: { user: any }) {
                 )}
               </div>
               
-              <div className="px-4 py-2 border-t border-gray-100">
+              <div className="px-4 py-2 border-t border-border">
                 <Link 
-                  href={`/dashboard/${user.id}/notifications` }
-                  className="text-xs text-blue-600 hover:text-blue-800"
+                  href={`/dashboard/${user.id}/notifications`}
+                  className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                   onClick={() => setShowNotifications(false)}
                 >
                   View all notifications
@@ -311,7 +317,7 @@ export default function Navbar({ user }: { user: any }) {
             <DropdownMenuLabel>
               <div className="flex flex-col">
                 <span className="text-sm font-medium">{user.name}</span>
-                <span className="text-xs text-gray-500 truncate">{user.email}</span>
+                <span className="text-xs text-muted-foreground truncate">{user.email}</span>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />

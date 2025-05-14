@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Loader2 } from "lucide-react";
+import { Loader2, Plus, ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
 import { TasksTableFilters } from "./TasksTableFilters";
 import { useTasksData } from "@/hooks/use-tasks-data";
@@ -23,6 +23,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
+import { NewTaskDialog } from "./NewTaskDialog";
 
 interface TasksTableProps {
   userId: string;
@@ -33,12 +34,17 @@ export function TasksTable({ userId }: TasksTableProps) {
   const { data: tasks, isLoading, error, updateFilters, refetch } = useTasksData(userId);
   
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
-  const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
   const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
+  const [isNewTaskDialogOpen, setIsNewTaskDialogOpen] = useState(false);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const tasksPerPage = 10;
 
   const handleStatusChange = (statuses: string[]) => {
     setSelectedStatuses(statuses);
+    setCurrentPage(1); // Reset to first page when filters change
     if (statuses.length === 1) {
       updateFilters({ status: statuses[0] });
     } else {
@@ -46,17 +52,9 @@ export function TasksTable({ userId }: TasksTableProps) {
     }
   };
 
-  const handleAssigneeChange = (assignees: string[]) => {
-    setSelectedAssignees(assignees);
-    if (assignees.length === 1) {
-      updateFilters({ assigneeId: assignees[0] });
-    } else {
-      updateFilters({ assigneeId: undefined });
-    }
-  };
-
   const handleProjectChange = (projects: string[]) => {
     setSelectedProjects(projects);
+    setCurrentPage(1); // Reset to first page when filters change
     if (projects.length === 1) {
       updateFilters({ projectId: projects[0] });
     } else {
@@ -66,6 +64,7 @@ export function TasksTable({ userId }: TasksTableProps) {
 
   const handleDueDateChange = (date: Date | undefined) => {
     setDueDate(date);
+    setCurrentPage(1); // Reset to first page when filters change
     updateFilters({ dueDate: date });
   };
 
@@ -85,6 +84,11 @@ export function TasksTable({ userId }: TasksTableProps) {
     } catch (error) {
       console.error("Failed to update task:", error);
     }
+  };
+
+  const handleNewTaskCreated = () => {
+    // Refetch the tasks data immediately when a new task is created
+    refetch();
   };
 
   if (isLoading) {
@@ -112,10 +116,6 @@ export function TasksTable({ userId }: TasksTableProps) {
 
   // Extract unique values for filters
   const uniqueStatuses = [...new Set(tasks.map((task) => task.status))];
-  const uniqueAssignees = tasks.flatMap((task) => task.assignees)
-    .filter((assignee, index, self) => 
-      index === self.findIndex((a) => a.id === assignee.id)
-    );
   const uniqueProjects = tasks.map((task) => task.list.board)
     .filter((board, index, self) => 
       index === self.findIndex((b) => b.id === board.id)
@@ -123,19 +123,8 @@ export function TasksTable({ userId }: TasksTableProps) {
 
   // Filter tasks based on selected filters (client-side filtering as backup)
   const filteredTasks = tasks.filter((task) => {
-    // These filters should work alongside the server-side filters
-    // for enhanced user experience
-    
     // Filter by status
     if (selectedStatuses.length > 0 && !selectedStatuses.includes(task.status)) {
-      return false;
-    }
-
-    // Filter by assignee
-    if (
-      selectedAssignees.length > 0 &&
-      !task.assignees.some((assignee) => selectedAssignees.includes(assignee.id))
-    ) {
       return false;
     }
 
@@ -150,23 +139,36 @@ export function TasksTable({ userId }: TasksTableProps) {
     return true;
   });
 
+  // Pagination logic
+  const indexOfLastTask = currentPage * tasksPerPage;
+  const indexOfFirstTask = indexOfLastTask - tasksPerPage;
+  const currentTasks = filteredTasks.slice(indexOfFirstTask, indexOfLastTask);
+  const totalPages = Math.ceil(filteredTasks.length / tasksPerPage);
+
   return (
     <div className="space-y-4">
-      <TasksTableFilters
-        statuses={uniqueStatuses}
-        assignees={uniqueAssignees}
-        projects={uniqueProjects}
-        selectedStatuses={selectedStatuses}
-        selectedAssignees={selectedAssignees}
-        selectedProjects={selectedProjects}
-        dueDate={dueDate}
-        onStatusChange={handleStatusChange}
-        onAssigneeChange={handleAssigneeChange}
-        onProjectChange={handleProjectChange}
-        onDueDateChange={handleDueDateChange}
-      />
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <TasksTableFilters
+          statuses={uniqueStatuses}
+          assignees={[]} // Empty array since you don't need assignees
+          projects={uniqueProjects}
+          selectedStatuses={selectedStatuses}
+          selectedAssignees={[]} // Empty array
+          selectedProjects={selectedProjects}
+          dueDate={dueDate}
+          onStatusChange={handleStatusChange}
+          onAssigneeChange={() => {}} // Empty function
+          onProjectChange={handleProjectChange}
+          onDueDateChange={handleDueDateChange}
+        />
+        
+        <Button onClick={() => setIsNewTaskDialogOpen(true)} className="w-full md:w-auto">
+          <Plus className="h-4 w-4 mr-2" />
+          New Task
+        </Button>
+      </div>
 
-      <div className="rounded-md border shadow-sm">
+      <div className="rounded-md border shadow-sm overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -174,9 +176,8 @@ export function TasksTable({ userId }: TasksTableProps) {
                 <span className="sr-only">Complete</span>
               </TableHead>
               <TableHead className="min-w-[150px]">Task Name</TableHead>
-              <TableHead className="min-w-[150px]">Project</TableHead>
-              <TableHead className="min-w-[150px]">Assignee</TableHead>
-              <TableHead className="min-w-[120px]">Due Date</TableHead>
+              <TableHead className="min-w-[150px] hidden sm:table-cell">Project</TableHead>
+              <TableHead className="min-w-[120px] hidden md:table-cell">Due Date</TableHead>
               <TableHead className="min-w-[120px]">Status</TableHead>
               <TableHead className="w-[70px]">
                 <span className="sr-only">Actions</span>
@@ -184,14 +185,14 @@ export function TasksTable({ userId }: TasksTableProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredTasks.length === 0 ? (
+            {currentTasks.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center">
+                <TableCell colSpan={5} className="h-24 text-center">
                   No tasks found.
                 </TableCell>
               </TableRow>
             ) : (
-              filteredTasks.map((task) => (
+              currentTasks.map((task) => (
                 <TableRow key={task.id} className={task.completed ? "bg-muted/50" : ""}>
                   <TableCell>
                     <Checkbox
@@ -202,9 +203,19 @@ export function TasksTable({ userId }: TasksTableProps) {
                     />
                   </TableCell>
                   <TableCell className={`font-medium ${task.completed ? "line-through text-muted-foreground" : ""}`}>
-                    {task.title}
+                    <div>
+                      {task.title}
+                      
+                      {/* Mobile-only project and due date info */}
+                      <div className="block sm:hidden text-xs text-muted-foreground mt-1">
+                        {task.list.board.title}
+                      </div>
+                      <div className="block md:hidden text-xs text-muted-foreground mt-1">
+                        {task.dueDate ? formatDate(task.dueDate) : "No due date"}
+                      </div>
+                    </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden sm:table-cell">
                     <div className="flex items-center">
                       <span className="font-medium bg-blue-100 text-blue-800 p-1 rounded-md text-xs mr-2">
                         {task.list.board.title.charAt(0).toUpperCase()}
@@ -212,19 +223,7 @@ export function TasksTable({ userId }: TasksTableProps) {
                       {task.list.board.title}
                     </div>
                   </TableCell>
-                  <TableCell>
-                    {task.assignees.length > 0 ? (
-                      <div className="flex items-center gap-2">
-                        <span className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
-                          {task.assignees[0].name?.charAt(0).toUpperCase() || "U"}
-                        </span>
-                        <span>{task.assignees[0].name || "Unknown"}</span>
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">Unassigned</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden md:table-cell">
                     {task.dueDate ? (
                       <span
                         className={
@@ -266,11 +265,44 @@ export function TasksTable({ userId }: TasksTableProps) {
           </TableBody>
         </Table>
       </div>
-      <div className="flex items-center justify-between py-4">
+
+      {/* Pagination Controls */}
+      <div className="flex flex-col sm:flex-row items-center justify-between py-4 gap-4">
         <div className="text-sm text-muted-foreground">
-          Showing {filteredTasks.length} of {tasks.length} tasks
+          Showing {indexOfFirstTask + 1}-{Math.min(indexOfLastTask, filteredTasks.length)} of {filteredTasks.length} tasks
+        </div>
+        
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+          >
+            <ChevronLeft className="h-4 w-4" />
+            <span className="sr-only md:not-sr-only md:ml-2">Previous</span>
+          </Button>
+          <div className="text-sm font-medium">
+            Page {currentPage} of {totalPages || 1}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+            disabled={currentPage === totalPages || totalPages === 0}
+          >
+            <span className="sr-only md:not-sr-only md:mr-2">Next</span>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
         </div>
       </div>
+      
+      {/* New Task Dialog */}
+      <NewTaskDialog 
+        open={isNewTaskDialogOpen}
+        onOpenChange={setIsNewTaskDialogOpen}
+        onTaskCreated={handleNewTaskCreated}
+      />
     </div>
   );
 }

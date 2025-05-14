@@ -1,3 +1,4 @@
+// api/board/%5BboardId%5D/full/route.ts
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";

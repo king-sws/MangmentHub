@@ -4,7 +4,7 @@ import Stripe from 'stripe';
 // Create a Stripe instance with your secret key
 // Use environment variable for security
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2023-10-16', // Changed from '2025-04-30.basil' to supported version
+  apiVersion: '2023-10-16', // Use a consistent API version
 });
 
 // Create a Checkout Session
@@ -24,10 +24,11 @@ export async function createCheckoutSession({
     BUSINESS: process.env.STRIPE_PRICE_ID_BUSINESS!,
   };
   const priceId = PRICE_IDS[plan];
- 
+  
   if (!priceId) {
     throw new Error(`Invalid plan: ${plan}`);
   }
+
   // Create Stripe checkout session
   const session = await stripe.checkout.sessions.create({
     client_reference_id: userId,
@@ -46,6 +47,7 @@ export async function createCheckoutSession({
       plan,
     },
   });
+
   return { sessionId: session.id, url: session.url };
 }
 
@@ -64,5 +66,16 @@ export async function verifyStripeWebhookEvent(
   } catch (err) {
     console.error(`Webhook signature verification failed.`, err);
     throw new Error('Invalid signature');
+  }
+}
+
+// Verify a checkout session
+export async function verifyCheckoutSession(sessionId: string) {
+  try {
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    return session;
+  } catch (error) {
+    console.error("Failed to verify checkout session:", error);
+    throw new Error("Invalid session");
   }
 }

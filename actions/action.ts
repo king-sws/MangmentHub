@@ -1,4 +1,4 @@
-// actions/auth.ts
+// actions/action.ts
 "use server";
 
 import { signIn, signOut } from "@/auth";
@@ -8,55 +8,79 @@ import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
 
 // Sign in with credentials
+// Update SignInWithCredentials function in actions/action.ts
 export const SignInWithCredentials = async (
   email: string, 
   password: string,
   inviteToken?: string
 ) => {
   try {
+    // Add console.log to track what's happening
+    console.log("Attempting to sign in with:", { email, hasInviteToken: !!inviteToken });
+    
     const result = await signIn("credentials", {
       email,
       password,
       redirect: false,
     });
+    
+    console.log("Sign in result:", result);
 
-    if (result?.error) {
-      return { success: false, error: result.error };
+    if (!result || result.error) {
+      return { 
+        success: false, 
+        error: result?.error || "Authentication failed" 
+      };
     }
 
     // If there's an invite token, process it after successful sign-in
     if (inviteToken) {
-      // Get the current user ID
-      const user = await prisma.user.findUnique({
-        where: { email },
-        select: { id: true }
-      });
+      try {
+        // Get the current user ID - we need to fetch the user since result.user might not be available
+        const user = await prisma.user.findUnique({
+          where: { email },
+          select: { id: true }
+        });
 
-      if (user) {
-        // Process the invitation
-        const processResult = await processInvitationToken(inviteToken, user.id);
-        if (!processResult.success) {
+        if (user) {
+          // Process the invitation
+          const processResult = await processInvitationToken(inviteToken, user.id);
+          if (!processResult.success) {
+            return { 
+              success: true, 
+              inviteProcessed: false, 
+              error: processResult.error,
+              workspaceId: null
+            };
+          }
           return { 
-            success: true, 
-            inviteProcessed: false, 
-            error: processResult.error,
-            workspaceId: null
+            success: true,
+            inviteProcessed: true,
+            workspaceId: processResult.workspaceId 
           };
         }
+      } catch (inviteError) {
+        console.error("Error processing invite:", inviteError);
+        // Still return success for the sign-in but note invite processing failed
         return { 
-          success: true,
-          inviteProcessed: true,
-          workspaceId: processResult.workspaceId 
+          success: true, 
+          inviteProcessed: false,
+          error: "Failed to process invitation"
         };
       }
     }
 
-    return { success: true , userId: result?.user?.id};
+    // Successfully signed in
+    return { 
+      success: true,
+      // Get userId from session if available
+      userId: result?.user?.id || null
+    };
   } catch (error) {
     console.error("Sign-in error:", error);
     return { success: false, error: "An error occurred during sign-in." };
   }
-};
+}
 
 // Sign up with credentials
 export const SignUpWithCredentials = async (

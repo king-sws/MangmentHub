@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 // app/api/stripe/verify-setup/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import Stripe from "stripe";
+import { stripe } from "@/actions/stripe";
 
 export async function GET(req: NextRequest) {
   try {
@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
         { status: 401 }
       );
     }
-
+    
     // Environment variable checks
     const envChecks = {
       stripeSecretKey: !!process.env.STRIPE_SECRET_KEY,
@@ -22,24 +22,19 @@ export async function GET(req: NextRequest) {
       stripePriceIdBusiness: !!process.env.STRIPE_PRICE_ID_BUSINESS,
       stripeWebhookSecret: !!process.env.STRIPE_WEBHOOK_SECRET,
       appUrl: !!process.env.NEXT_PUBLIC_APP_URL,
-      adminApiKey: !!process.env.ADMIN_API_KEY,
     };
     
     const missingEnvVars = Object.entries(envChecks)
       .filter(([_, exists]) => !exists)
       .map(([name]) => name);
     
-    // Initialize Stripe if possible
+    // Initialize Stripe check variables
     let stripeConnection = false;
     let priceProExists = false;
     let priceBusinessExists = false;
     
     if (process.env.STRIPE_SECRET_KEY) {
       try {
-        const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-          apiVersion: "2025-04-30.basil",
-        });
-        
         // Test connection
         const testConnection = await stripe.balance.retrieve();
         stripeConnection = !!testConnection;
@@ -84,11 +79,11 @@ export async function GET(req: NextRequest) {
           business: priceBusinessExists,
         }
       },
-      message: missingEnvVars.length > 0 
+      message: missingEnvVars.length > 0
         ? `Missing environment variables: ${missingEnvVars.join(", ")}`
         : "All environment variables present",
-      stripeMessage: !stripeConnection 
-        ? "Could not connect to Stripe" 
+      stripeMessage: !stripeConnection
+        ? "Could not connect to Stripe"
         : "Connected to Stripe successfully",
     });
     

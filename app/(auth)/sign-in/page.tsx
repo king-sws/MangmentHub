@@ -61,7 +61,7 @@ export default function SignInPage() {
   return (
     <div className="min-h-screen grid grid-cols-1 md:grid-cols-2">
       {/* Form side */}
-      <div className="flex flex-col justify-center px-6 py-12 lg:px-20 bg-white">
+      <div className="flex flex-col justify-center px-6 py-12 lg:px-20 bg-white dark:bg-gray-900">
         <div className="mx-auto w-full max-w-md space-y-6">
           <div>
             <h2 className="text-3xl font-bold">Sign In</h2>
@@ -128,7 +128,7 @@ export default function SignInPage() {
         <div className="absolute inset-0 bg-gradient-to-b from-primary to-secondary opacity-50" />
         <div className="flex items-center justify-center h-full">
             <Image
-              src="/auth-illustration.jpg"
+              src="/auth-illustration-3.jpg"
               alt="Auth Illustration"
               fill
               className="w-full h-auto "

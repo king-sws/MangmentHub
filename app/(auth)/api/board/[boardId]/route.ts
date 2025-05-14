@@ -20,6 +20,7 @@ export async function GET(
       },
       include: {
         workspace: true,
+        lists: true,
       },
     });
 

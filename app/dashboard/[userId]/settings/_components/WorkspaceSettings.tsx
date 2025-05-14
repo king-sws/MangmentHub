@@ -165,8 +165,8 @@ export function WorkspaceSettings({ workspaceId }: { workspaceId: string }) {
   // Show loading state
   if (isLoading) {
     return (
-      <div className="flex justify-center p-6">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex justify-center py-4 sm:py-6">
+        <Loader2 className="h-6 w-6 sm:h-8 sm:w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -174,14 +174,14 @@ export function WorkspaceSettings({ workspaceId }: { workspaceId: string }) {
   // Show error state
   if (error) {
     return (
-      <div className="bg-red-50 p-4 rounded-md border border-red-200 dark:bg-red-900/20 dark:border-red-900/50">
+      <div className="bg-red-50 p-3 sm:p-4 rounded-md border border-red-200 dark:bg-red-900/20 dark:border-red-900/50">
         <div className="flex items-center gap-2">
-          <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
-          <p className="text-red-600 dark:text-red-400">{error}</p>
+          <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 text-red-600 dark:text-red-400" />
+          <p className="text-sm sm:text-base text-red-600 dark:text-red-400">{error}</p>
         </div>
         <Button 
           variant="outline" 
-          className="mt-2 text-sm"
+          className="mt-2 text-xs sm:text-sm"
           onClick={() => window.location.reload()}
         >
           Retry
@@ -193,7 +193,7 @@ export function WorkspaceSettings({ workspaceId }: { workspaceId: string }) {
   // Show no access message
   if (!workspace || (userRole !== "OWNER" && userRole !== "ADMIN")) {
     return (
-      <div className="text-center py-8 text-muted-foreground">
+      <div className="text-center py-6 sm:py-8 text-muted-foreground text-sm sm:text-base">
         You don't have permission to manage this workspace's settings.
       </div>
     );
@@ -201,57 +201,59 @@ export function WorkspaceSettings({ workspaceId }: { workspaceId: string }) {
 
   // Render the form
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold tracking-tight">Workspace Settings</h2>
-        <p className="text-muted-foreground">
+        <h2 className="text-xl sm:text-2xl font-semibold tracking-tight">Workspace Settings</h2>
+        <p className="text-sm sm:text-base text-muted-foreground">
           Manage your workspace details and preferences.
         </p>
       </div>
       
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        <div className="space-y-4">
-          <div className="space-y-2">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6">
+        <div className="space-y-3 sm:space-y-4">
+          <div className="space-y-1 sm:space-y-2">
             <Label htmlFor="name">Name</Label>
             <Input
               id="name"
               placeholder="Workspace Name"
               {...register("name")}
               aria-invalid={!!errors.name}
+              className="text-sm sm:text-base"
             />
             {errors.name && (
-              <p className="text-sm text-red-500">{errors.name.message}</p>
+              <p className="text-xs sm:text-sm text-red-500">{errors.name.message}</p>
             )}
           </div>
           
-          <div className="space-y-2">
+          <div className="space-y-1 sm:space-y-2">
             <Label htmlFor="description">Description</Label>
             <Textarea
               id="description"
               placeholder="Describe the purpose of this workspace"
-              className="resize-none h-24"
+              className="resize-none h-20 sm:h-24 text-sm sm:text-base"
               {...register("description")}
               aria-invalid={!!errors.description}
             />
             {errors.description && (
-              <p className="text-sm text-red-500">{errors.description.message}</p>
+              <p className="text-xs sm:text-sm text-red-500">{errors.description.message}</p>
             )}
           </div>
         </div>
         
-        <div className="flex justify-between">
+        <div className="flex flex-col sm:flex-row gap-3 sm:justify-between">
           <Button
             type="submit"
             disabled={isSaving || !isDirty}
+            className="w-full sm:w-auto text-sm"
           >
             {isSaving ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin mr-1 sm:mr-2" />
                 Saving...
               </>
             ) : (
               <>
-                <Save className="h-4 w-4 mr-2" />
+                <Save className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 Save Changes
               </>
             )}
@@ -260,12 +262,12 @@ export function WorkspaceSettings({ workspaceId }: { workspaceId: string }) {
           {userRole === "OWNER" && (
             <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
               <AlertDialogTrigger asChild>
-                <Button variant="destructive">
-                  <Trash2 className="h-4 w-4 mr-2" />
+                <Button variant="destructive" className="w-full sm:w-auto text-sm">
+                  <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                   Delete Workspace
                 </Button>
               </AlertDialogTrigger>
-              <AlertDialogContent>
+              <AlertDialogContent className="sm:max-w-md">
                 <AlertDialogHeader>
                   <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                   <AlertDialogDescription>
@@ -273,16 +275,16 @@ export function WorkspaceSettings({ workspaceId }: { workspaceId: string }) {
                     and remove all associated data.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+                  <AlertDialogCancel className="w-full sm:w-auto">Cancel</AlertDialogCancel>
                   <AlertDialogAction
                     onClick={handleDeleteWorkspace}
-                    className="bg-red-600 hover:bg-red-700"
+                    className="bg-red-600 hover:bg-red-700 w-full sm:w-auto"
                     disabled={isSaving}
                   >
                     {isSaving ? (
                       <>
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin mr-1 sm:mr-2" />
                         Deleting...
                       </>
                     ) : (
@@ -297,28 +299,28 @@ export function WorkspaceSettings({ workspaceId }: { workspaceId: string }) {
       </form>
       
       {userRole === "OWNER" && (
-        <Card className="mt-8 border-dashed border-red-200 bg-red-50 dark:bg-red-900/10">
-          <CardHeader>
-            <CardTitle className="text-red-600 dark:text-red-400">Danger Zone</CardTitle>
-            <CardDescription className="text-red-500 dark:text-red-300">
+        <Card className="mt-6 sm:mt-8 border-dashed border-red-200 bg-red-50 dark:bg-red-900/10 dark:border-red-800/30">
+          <CardHeader className="p-3 sm:p-4 pb-1 sm:pb-2">
+            <CardTitle className="text-red-600 dark:text-red-400 text-base sm:text-lg">Danger Zone</CardTitle>
+            <CardDescription className="text-red-500 dark:text-red-300 text-xs sm:text-sm">
               Actions here can't be undone.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <p className="text-sm text-red-600 dark:text-red-400">
+          <CardContent className="p-3 sm:p-4 py-2 sm:py-3">
+            <p className="text-xs sm:text-sm text-red-600 dark:text-red-400">
               Deleting this workspace will remove all associated data, including all
               members, invitations, and content.
             </p>
           </CardContent>
-          <CardFooter>
+          <CardFooter className="p-3 sm:p-4 pt-0 sm:pt-1">
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="destructive">
-                  <Trash2 className="h-4 w-4 mr-2" />
+                <Button variant="destructive" className="w-full sm:w-auto text-xs sm:text-sm">
+                  <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                   Delete Workspace
                 </Button>
               </AlertDialogTrigger>
-              <AlertDialogContent>
+              <AlertDialogContent className="sm:max-w-md">
                 <AlertDialogHeader>
                   <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                   <AlertDialogDescription>
@@ -326,11 +328,11 @@ export function WorkspaceSettings({ workspaceId }: { workspaceId: string }) {
                     and remove all associated data.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+                  <AlertDialogCancel className="w-full sm:w-auto">Cancel</AlertDialogCancel>
                   <AlertDialogAction
                     onClick={handleDeleteWorkspace}
-                    className="bg-red-600 hover:bg-red-700"
+                    className="bg-red-600 hover:bg-red-700 w-full sm:w-auto"
                   >
                     Delete Workspace
                   </AlertDialogAction>

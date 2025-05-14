@@ -1,6 +1,7 @@
 // import { cookies } from "next/headers";
 // import { jwtVerify } from "jose";
 
+// // eslint-disable-next-line @typescript-eslint/no-unused-vars
 // export async function getUserFromToken(req: Request) {
 //   const cookieStore = cookies();
 //   const token = cookieStore.get("token")?.value;

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -160,18 +161,18 @@ export function SettingsForm() {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center p-6">
-        <p className="text-gray-500">Loading user data...</p>
+      <div className="flex justify-center p-4 sm:p-6">
+        <p className="text-gray-500 dark:text-gray-400">Loading user data...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-red-50 p-4 rounded-md border border-red-200">
-        <p className="text-red-600">{error}</p>
+      <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-md border border-red-200 dark:border-red-800">
+        <p className="text-red-600 dark:text-red-400">{error}</p>
         <button 
-          className="mt-2 text-sm text-red-700 underline"
+          className="mt-2 text-sm text-red-700 dark:text-red-400 underline hover:opacity-80"
           onClick={() => window.location.reload()}
         >
           Retry
@@ -188,8 +189,8 @@ export function SettingsForm() {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       <div className="space-y-4">
-        <h3 className="text-lg font-medium text-gray-900">Profile Image</h3>
-        <p className="text-sm text-gray-500">
+        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Profile Image</h3>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
           Upload a profile picture to personalize your account.
         </p>
         
@@ -200,26 +201,26 @@ export function SettingsForm() {
         />
       </div>
       
-      <div className="pt-4 border-t border-gray-200">
+      <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
         <div className="space-y-1">
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             Name
           </label>
           <input
             id="name"
             type="text"
             {...register("name")}
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
+            className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 sm:text-sm"
             disabled={isSubmitting}
           />
           {errors.name && (
-            <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>
+            <p className="text-red-500 dark:text-red-400 text-sm mt-1">{errors.name.message}</p>
           )}
         </div>
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+        <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
           Email
         </label>
         <input
@@ -227,23 +228,23 @@ export function SettingsForm() {
           type="email"
           {...register("email")}
           disabled={!isCredentialUser || isSubmitting}
-          className={`mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm ${
-            !isCredentialUser ? "bg-gray-100 cursor-not-allowed" : ""
+          className={`mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm ${
+            !isCredentialUser ? "bg-gray-100 dark:bg-gray-800 cursor-not-allowed" : "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
           }`}
         />
         {!isCredentialUser && (
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
             Email cannot be changed for accounts using social login.
           </p>
         )}
         {errors.email && (
-          <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
+          <p className="text-red-500 dark:text-red-400 text-sm mt-1">{errors.email.message}</p>
         )}
       </div>
 
       {isCredentialUser && (
         <div className="space-y-1">
-          <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             New Password
           </label>
           <input
@@ -251,13 +252,13 @@ export function SettingsForm() {
             type="password"
             {...register("password")}
             disabled={isSubmitting}
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
+            className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 sm:text-sm"
           />
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
             Leave blank to keep your current password.
           </p>
           {errors.password && (
-            <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>
+            <p className="text-red-500 dark:text-red-400 text-sm mt-1">{errors.password.message}</p>
           )}
         </div>
       )}
@@ -266,7 +267,7 @@ export function SettingsForm() {
         <button
           type="submit"
           disabled={isSubmitting}
-          className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${
+          className={`w-full sm:w-auto flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 focus:ring-offset-gray-50 dark:focus:ring-offset-gray-800 transition-colors ${
             isSubmitting ? "opacity-70 cursor-not-allowed" : ""
           }`}
         >

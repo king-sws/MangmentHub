@@ -61,22 +61,21 @@ export function CreateBoardButton({
     }
   };
 
-  // If disabled due to plan limits, show upgrade tooltip
   if (disabled) {
     return (
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
             <div>
-              <Button variant="default" size="sm" disabled className="flex items-center">
+              <Button variant="default" size="sm" disabled className="flex items-center bg-amber-500/80 hover:bg-amber-500">
                 <Plus className="h-4 w-4 mr-2" />
                 Create Board
               </Button>
             </div>
           </TooltipTrigger>
-          <TooltipContent className="max-w-xs">
+          <TooltipContent className="max-w-xs bg-amber-100 text-amber-800">
             <div className="flex items-start gap-2">
-              <AlertCircle className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
+              <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
               <div>
                 <p>You've reached your board limit ({currentCount}/{limit}) on the {plan} plan.</p>
                 <Link 
@@ -95,7 +94,7 @@ export function CreateBoardButton({
 
   return (
     <>
-      <Button onClick={() => setOpen(true)} size="sm" variant="default" className="flex items-center">
+      <Button onClick={() => setOpen(true)} size="sm" variant="default" className="flex items-center bg-gradient-to-r from-primary to-primary/80">
         <Plus className="h-4 w-4 mr-2" />
         Create Board
       </Button>
@@ -119,9 +118,9 @@ export function CreateBoardButton({
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   disabled={isLoading}
+                  aria-required="true"
                 />
               </div>
-              
               {limit > 0 && (
                 <div className="text-xs text-muted-foreground">
                   {currentCount} of {limit} boards used ({plan} plan)

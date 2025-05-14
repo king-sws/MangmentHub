@@ -1,7 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { Calendar } from "lucide-react";
+import { format } from "date-fns";
+
+// UI Components
 import {
   Dialog,
   DialogContent,
@@ -10,9 +13,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import {
   Select,
   SelectContent,
@@ -20,261 +28,287 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
-import { format } from "date-fns";
-import { cn } from "@/lib/utils";
-import { CardStatus } from "@prisma/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 
-import { useWorkspaceMembers } from "@/hooks/WorkspaceMember";
+// Form validation
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+
+// Custom hooks
 import { useBoards } from "./useBoards";
 import { useLists } from "./useLists";
+
+// Task schema for validation
+const taskSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  description: z.string().optional(),
+  dueDate: z.date().optional(),
+  status: z.enum(["TODO", "IN_PROGRESS", "IN_REVIEW", "DONE"]),
+  boardId: z.string().min(1, "Board is required"),
+  listId: z.string().min(1, "List is required"),
+});
+
+type TaskFormValues = z.infer<typeof taskSchema>;
 
 interface NewTaskDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onTaskCreated?: () => void; // New callback prop for task creation
 }
 
-export function NewTaskDialog({ open, onOpenChange }: NewTaskDialogProps) {
-  const router = useRouter();
+export function NewTaskDialog({ open, onOpenChange, onTaskCreated }: NewTaskDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
-  const [status, setStatus] = useState<CardStatus>("TODO");
-  const [selectedBoardId, setSelectedBoardId] = useState<string>("");
-  const [selectedListId, setSelectedListId] = useState<string>("");
-  const [selectedAssigneeIds, setSelectedAssigneeIds] = useState<string[]>([]);
-
-  const { data: boards } = useBoards();
-  const { data: lists } = useLists(selectedBoardId);
-  const { data: members } = useWorkspaceMembers(
-    boards?.find((board) => board.id === selectedBoardId)?.workspaceId
-  );
-
-  // Reset form when dialog opens or closes
-  const resetForm = () => {
-    setTitle("");
-    setDescription("");
-    setDueDate(undefined);
-    setStatus("TODO");
-    setSelectedBoardId("");
-    setSelectedListId("");
-    setSelectedAssigneeIds([]);
-  };
-
-  const handleOpenChange = (open: boolean) => {
+  
+  // Fetch available boards
+  const { boards, isLoading: isBoardsLoading } = useBoards();
+  
+  // Get form
+  const form = useForm<TaskFormValues>({
+    resolver: zodResolver(taskSchema),
+    defaultValues: {
+      title: "",
+      description: "",
+      status: "TODO",
+    },
+  });
+  
+  // Watch boardId to fetch lists when it changes
+  const selectedBoardId = form.watch("boardId");
+  const { lists, isLoading: isListsLoading } = useLists(selectedBoardId);
+  
+  // Reset form when dialog is closed
+  useEffect(() => {
     if (!open) {
-      resetForm();
+      form.reset();
     }
-    onOpenChange(open);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title || !selectedListId) return;
-
-    setIsSubmitting(true);
+  }, [open, form]);
+  
+  // Handle form submission
+  const onSubmit = async (values: TaskFormValues) => {
     try {
-      const response = await fetch("/api/cards", {
+      setIsSubmitting(true);
+      
+      const response = await fetch(`/api/lists/${values.listId}/cards`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          title,
-          description,
-          listId: selectedListId,
-          dueDate: dueDate?.toISOString(),
-          status,
-          assigneeIds: selectedAssigneeIds,
+          title: values.title,
+          description: values.description || "",
+          dueDate: values.dueDate,
+          status: values.status,
         }),
       });
-
-      if (response.ok) {
-        handleOpenChange(false);
-        router.refresh();
-      } else {
-        console.error("Failed to create task");
+      
+      if (!response.ok) {
+        throw new Error("Failed to create task");
       }
+      
+      // Call the onTaskCreated callback to trigger a refetch in the parent component
+      if (onTaskCreated) {
+        onTaskCreated();
+      }
+      
+      // Close the dialog
+      onOpenChange(false);
     } catch (error) {
       console.error("Error creating task:", error);
     } finally {
       setIsSubmitting(false);
     }
   };
-
-  const statusOptions = [
-    { value: "BACKLOG", label: "Backlog" },
-    { value: "TODO", label: "Todo" },
-    { value: "IN_PROGRESS", label: "In Progress" },
-    { value: "IN_REVIEW", label: "In Review" },
-    { value: "DONE", label: "Done" },
-  ];
-
+  
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Create New Task</DialogTitle>
-            <DialogDescription>
-              Fill in the details below to create a new task.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <label htmlFor="title" className="text-sm font-medium">
-                Title
-              </label>
-              <Input
-                id="title"
-                placeholder="Task title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                required
-              />
-            </div>
-            <div className="grid gap-2">
-              <label htmlFor="description" className="text-sm font-medium">
-                Description
-              </label>
-              <Textarea
-                id="description"
-                placeholder="Task description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={3}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <label htmlFor="board" className="text-sm font-medium">
-                  Project
-                </label>
-                <Select
-                  value={selectedBoardId}
-                  onValueChange={(value) => {
-                    setSelectedBoardId(value);
-                    setSelectedListId("");
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select project" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {boards?.map((board) => (
-                      <SelectItem key={board.id} value={board.id}>
-                        {board.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <label htmlFor="list" className="text-sm font-medium">
-                  List
-                </label>
-                <Select
-                  value={selectedListId}
-                  onValueChange={setSelectedListId}
-                  disabled={!selectedBoardId}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select list" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {lists?.map((list) => (
-                      <SelectItem key={list.id} value={list.id}>
-                        {list.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <label htmlFor="status" className="text-sm font-medium">
-                  Status
-                </label>
-                <Select value={status} onValueChange={(value) => setStatus(value as CardStatus)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {statusOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <label htmlFor="dueDate" className="text-sm font-medium">
-                  Due Date
-                </label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !dueDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {dueDate ? format(dueDate, "PPP") : "Pick a date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={dueDate}
-                      onSelect={setDueDate}
-                      initialFocus
+        <DialogHeader>
+          <DialogTitle>Create New Task</DialogTitle>
+          <DialogDescription>
+            Add a new task to your task list.
+          </DialogDescription>
+        </DialogHeader>
+        
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {/* Title */}
+            <FormField
+              control={form.control}
+              name="title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Title</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="Task title" 
+                      {...field} 
+                      disabled={isSubmitting}
                     />
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
-            <div className="grid gap-2">
-              <label htmlFor="assignee" className="text-sm font-medium">
-                Assignee
-              </label>
-              <Select
-                value={selectedAssigneeIds[0] || ""}
-                onValueChange={(value) => setSelectedAssigneeIds(value ? [value] : [])}
-                disabled={!selectedBoardId}
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            {/* Description */}
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      placeholder="Task description" 
+                      {...field} 
+                      value={field.value || ""}
+                      disabled={isSubmitting}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            {/* Board Selection */}
+            <FormField
+              control={form.control}
+              name="boardId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Board</FormLabel>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    value={field.value}
+                    disabled={isSubmitting || isBoardsLoading}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a board" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {boards?.map((board) => (
+                        <SelectItem key={board.id} value={board.id}>
+                          {board.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            {/* List Selection */}
+            <FormField
+              control={form.control}
+              name="listId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>List</FormLabel>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    value={field.value}
+                    disabled={isSubmitting || isListsLoading || !selectedBoardId}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a list" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {lists?.map((list) => (
+                        <SelectItem key={list.id} value={list.id}>
+                          {list.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            {/* Due Date */}
+            <FormField
+              control={form.control}
+              name="dueDate"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Due Date</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant="outline"
+                          className={`w-full justify-start text-left font-normal ${
+                            !field.value && "text-muted-foreground"
+                          }`}
+                          disabled={isSubmitting}
+                        >
+                          <Calendar className="mr-2 h-4 w-4" />
+                          {field.value ? format(field.value, "PPP") : "Pick a date"}
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarComponent
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            {/* Status */}
+            <FormField
+              control={form.control}
+              name="status"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Status</FormLabel>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    defaultValue={field.value}
+                    disabled={isSubmitting}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="TODO">To Do</SelectItem>
+                      <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
+                      <SelectItem value="DONE">Done</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <DialogFooter>
+              <Button 
+                type="submit" 
+                disabled={isSubmitting}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Assign to" />
-                </SelectTrigger>
-                <SelectContent>
-                  {members?.map((member) => (
-                    <SelectItem key={member.userId} value={member.userId}>
-                      {member.user.name || member.user.email}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting || !title || !selectedListId}>
-              {isSubmitting ? "Creating..." : "Create Task"}
-            </Button>
-          </DialogFooter>
-        </form>
+                {isSubmitting ? "Creating..." : "Create Task"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );

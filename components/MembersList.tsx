@@ -1,8 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// components/MembersList.tsx
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, memo } from "react";
 import { 
   Loader2, 
   Trash2, 
@@ -92,18 +91,18 @@ interface Invitation {
   token: string;
 }
 
-// Helper to format dates
+// Helper functions
 const formatDate = (dateStr: string) => {
   const date = new Date(dateStr);
   return new Intl.DateTimeFormat('en-US', {
     month: 'short',
     day: 'numeric',
     hour: 'numeric',
-    minute: '2-digit'
+    minute: '2-digit',
+    hour12: true
   }).format(date);
 };
 
-// Helper to get initials from name or email
 const getInitials = (name: string | null, email: string): string => {
   if (name) {
     return name
@@ -116,41 +115,52 @@ const getInitials = (name: string | null, email: string): string => {
   return email.substring(0, 2).toUpperCase();
 };
 
-// Helper to get time since a date
 const getTimeSince = (dateStr: string) => {
   const date = new Date(dateStr);
   const now = new Date();
   const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
   
-  let interval = Math.floor(seconds / 31536000);
-  if (interval >= 1) {
-    return interval === 1 ? "1 year ago" : `${interval} years ago`;
+  const intervals = [
+    { unit: 'year', seconds: 31536000 },
+    { unit: 'month', seconds: 2592000 },
+    { unit: 'day', seconds: 86400 },
+    { unit: 'hour', seconds: 3600 },
+    { unit: 'minute', seconds: 60 }
+  ];
+
+  for (const { unit, seconds: intervalSeconds } of intervals) {
+    const interval = Math.floor(seconds / intervalSeconds);
+    if (interval >= 1) {
+      return interval === 1 ? `1 ${unit} ago` : `${interval} ${unit}s ago`;
+    }
   }
-  
-  interval = Math.floor(seconds / 2592000);
-  if (interval >= 1) {
-    return interval === 1 ? "1 month ago" : `${interval} months ago`;
-  }
-  
-  interval = Math.floor(seconds / 86400);
-  if (interval >= 1) {
-    return interval === 1 ? "1 day ago" : `${interval} days ago`;
-  }
-  
-  interval = Math.floor(seconds / 3600);
-  if (interval >= 1) {
-    return interval === 1 ? "1 hour ago" : `${interval} hours ago`;
-  }
-  
-  interval = Math.floor(seconds / 60);
-  if (interval >= 1) {
-    return interval === 1 ? "1 minute ago" : `${interval} minutes ago`;
-  }
-  
   return "just now";
 };
 
-export function MembersList({ workspaceId }: { workspaceId: string }) {
+const getRoleIcon = (role: string) => {
+  switch (role) {
+    case "OWNER": 
+      return <ShieldCheck className="h-4 w-4 text-purple-500 dark:text-purple-400" />;
+    case "ADMIN": 
+      return <ShieldHalf className="h-4 w-4 text-blue-500 dark:text-blue-400" />;
+    default: 
+      return <Shield className="h-4 w-4 text-gray-500 dark:text-gray-400" />;
+  }
+};
+
+const getRoleLabel = (role: string) => {
+  switch (role) {
+    case "OWNER": return "Owner";
+    case "ADMIN": return "Admin";
+    default: return "Member";
+  }
+};
+
+interface MembersListProps {
+  workspaceId: string;
+}
+
+export const MembersList = memo(({ workspaceId }: MembersListProps) => {
   const { data: session } = useSession();
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
@@ -178,8 +188,6 @@ export function MembersList({ workspaceId }: { workspaceId: string }) {
       }
       
       const data = await res.json();
-      
-      // Make sure we're handling the data correctly
       setMembers(data.members || []);
       setInvitations(data.invitations || []);
       setCurrentUserRole(data.currentUserRole || "MEMBER");
@@ -197,7 +205,10 @@ export function MembersList({ workspaceId }: { workspaceId: string }) {
   }, [fetchMembers]);
 
   const handleInvite = async () => {
-    if (!email) return;
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
     
     try {
       setLoading(true);
@@ -216,14 +227,9 @@ export function MembersList({ workspaceId }: { workspaceId: string }) {
       await fetchMembers();
       setEmail("");
       setInviteDialogOpen(false);
-      
-      if (data.member) {
-        toast.success("Member added successfully");
-      } else {
-        toast.success(data.emailDelivered 
-          ? "Invitation sent successfully" 
-          : "Invitation created, but email delivery failed");
-      }
+      toast.success(data.emailDelivered 
+        ? "Invitation sent successfully" 
+        : "Invitation created, but email delivery failed");
     } catch (error: any) {
       toast.error(error.message || "Failed to send invitation");
     } finally {
@@ -243,8 +249,7 @@ export function MembersList({ workspaceId }: { workspaceId: string }) {
       });
 
       if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || "Failed to remove member");
+        throw new Error((await res.json()).error || "Failed to remove member");
       }
       
       await fetchMembers();
@@ -270,8 +275,7 @@ export function MembersList({ workspaceId }: { workspaceId: string }) {
       });
 
       if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || "Failed to cancel invitation");
+        throw new Error((await res.json()).error || "Failed to cancel invitation");
       }
       
       await fetchMembers();
@@ -288,7 +292,6 @@ export function MembersList({ workspaceId }: { workspaceId: string }) {
   const handleLeaveWorkspace = async () => {
     try {
       setLoading(true);
-      // Find the current user's member ID
       const currentUser = members.find(m => m.user.id === session?.user?.id);
       if (!currentUser) {
         throw new Error("Your membership not found");
@@ -301,15 +304,14 @@ export function MembersList({ workspaceId }: { workspaceId: string }) {
       });
 
       if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || "Failed to leave workspace");
+        throw new Error((await res.json()).error || "Failed to leave workspace");
       }
       
-      // Redirect to workspaces list
       window.location.href = "/workspaces";
       toast.success("You have left the workspace");
     } catch (error: any) {
       toast.error(error.message || "Failed to leave workspace");
+    } finally {
       setLoading(false);
       setLeaveDialogOpen(false);
     }
@@ -318,7 +320,6 @@ export function MembersList({ workspaceId }: { workspaceId: string }) {
   const handleUpdateRole = async (userId: string, newRole: "ADMIN" | "MEMBER") => {
     try {
       setLoading(true);
-      // Use the direct member route for updating member roles
       const res = await fetch(`/api/workspaces/${workspaceId}/members/${userId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -326,8 +327,7 @@ export function MembersList({ workspaceId }: { workspaceId: string }) {
       });
 
       if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || "Failed to update role");
+        throw new Error((await res.json()).error || "Failed to update role");
       }
       
       await fetchMembers();
@@ -346,11 +346,12 @@ export function MembersList({ workspaceId }: { workspaceId: string }) {
       setInvitationCopied(true);
       toast.success("Invitation link copied to clipboard");
       
-      // Reset the copied state after 2 seconds
       setTimeout(() => {
         setInvitationCopied(false);
         setCopiedInvitation(null);
       }, 2000);
+    }).catch(() => {
+      toast.error("Failed to copy invitation link");
     });
   };
 
@@ -358,38 +359,19 @@ export function MembersList({ workspaceId }: { workspaceId: string }) {
   const isOwner = currentUserRole === "OWNER";
   const currentUserId = session?.user?.id;
 
-  const getRoleIcon = (role: string) => {
-    switch (role) {
-      case "OWNER": 
-        return <ShieldCheck className="h-4 w-4 text-purple-600" />;
-      case "ADMIN": 
-        return <ShieldHalf className="h-4 w-4 text-blue-600" />;
-      default: 
-        return <Shield className="h-4 w-4 text-gray-400" />;
-    }
-  };
-
-  const getRoleLabel = (role: string) => {
-    switch (role) {
-      case "OWNER": return "Owner";
-      case "ADMIN": return "Admin";
-      default: return "Member";
-    }
-  };
-
   if (loading && !refreshing) {
     return (
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <Skeleton className="h-8 w-48" />
-          <Skeleton className="h-9 w-32" />
+      <div className="space-y-6 animate-in fade-in duration-300">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <Skeleton className="h-8 w-48 rounded-lg" />
+          <Skeleton className="h-9 w-32 rounded-lg" />
         </div>
         
-        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full rounded-lg" />
         
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-16 w-full" />
+            <Skeleton key={i} className="h-16 w-full rounded-lg" />
           ))}
         </div>
       </div>
@@ -397,22 +379,24 @@ export function MembersList({ workspaceId }: { workspaceId: string }) {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header with counts */}
+    <div className="space-y-6 animate-in fade-in duration-300">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold tracking-tight">Team Members</h2>
-          <p className="text-sm text-muted-foreground">
+          <h2 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
+            Team Members
+          </h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
             {members.length} member{members.length !== 1 ? "s" : ""} in this workspace
           </p>
         </div>
         
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {!isOwner && (
             <Button 
               variant="outline" 
               size="sm"
               onClick={() => setLeaveDialogOpen(true)}
+              className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
             >
               <LogOut className="h-4 w-4 mr-2" />
               Leave Workspace
@@ -424,6 +408,7 @@ export function MembersList({ workspaceId }: { workspaceId: string }) {
             size="sm" 
             onClick={() => fetchMembers()}
             disabled={refreshing}
+            className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
             Refresh
@@ -432,22 +417,30 @@ export function MembersList({ workspaceId }: { workspaceId: string }) {
           {canManageMembers && (
             <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
               <DialogTrigger asChild>
-                <Button size="sm">
+                <Button 
+                  size="sm"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                >
                   <UserPlus className="h-4 w-4 mr-2" />
                   Invite Member
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="sm:max-w-md bg-white dark:bg-gray-800">
                 <DialogHeader>
-                  <DialogTitle>Invite a new member</DialogTitle>
-                  <DialogDescription>
+                  <DialogTitle className="text-gray-900 dark:text-gray-100">
+                    Invite a new member
+                  </DialogTitle>
+                  <DialogDescription className="text-gray-600 dark:text-gray-400">
                     Send an invitation to join your workspace.
                   </DialogDescription>
                 </DialogHeader>
                 
                 <div className="grid gap-4 py-4">
                   <div className="grid gap-2">
-                    <label htmlFor="email" className="text-sm font-medium">
+                    <label 
+                      htmlFor="email" 
+                      className="text-sm font-medium text-gray-700 dark:text-gray-200"
+                    >
                       Email address
                     </label>
                     <Input
@@ -456,33 +449,45 @@ export function MembersList({ workspaceId }: { workspaceId: string }) {
                       placeholder="colleague@example.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
+                      className="border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                     />
                   </div>
                   
                   <div className="grid gap-2">
-                    <label htmlFor="role" className="text-sm font-medium">
+                    <label 
+                      htmlFor="role" 
+                      className="text-sm font-medium text-gray-700 dark:text-gray-200"
+                    >
                       Role
                     </label>
                     <Select 
                       value={selectedRole} 
                       onValueChange={(value: "MEMBER" | "ADMIN") => setSelectedRole(value)}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
                         <SelectValue placeholder="Select a role" />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="MEMBER">Member</SelectItem>
-                        <SelectItem value="ADMIN">Admin</SelectItem>
+                      <SelectContent className="bg-white dark:bg-gray-800">
+                        <SelectItem value="MEMBER" className="text-gray-900 dark:text-gray-100">Member</SelectItem>
+                        <SelectItem value="ADMIN" className="text-gray-900 dark:text-gray-100">Admin</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
                 
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setInviteDialogOpen(false)}>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setInviteDialogOpen(false)}
+                    className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  >
                     Cancel
                   </Button>
-                  <Button onClick={handleInvite} disabled={!email || loading}>
+                  <Button 
+                    onClick={handleInvite} 
+                    disabled={!email || loading}
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                  >
                     {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Mail className="h-4 w-4 mr-2" />}
                     Send Invitation
                   </Button>
@@ -493,30 +498,41 @@ export function MembersList({ workspaceId }: { workspaceId: string }) {
         </div>
       </div>
 
-      <Tabs defaultValue="members">
-        <TabsList>
-          <TabsTrigger value="members">
+      <Tabs defaultValue="members" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 max-w-[400px] bg-gray-100 dark:bg-gray-800">
+          <TabsTrigger 
+            value="members"
+            className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700"
+          >
             Members ({members.length})
           </TabsTrigger>
           {canManageMembers && (
-            <TabsTrigger value="pending">
-              Pending Invitations ({invitations.length})
+            <TabsTrigger 
+              value="pending"
+              className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700"
+            >
+              Pending ({invitations.length})
             </TabsTrigger>
           )}
         </TabsList>
         
-        <TabsContent value="members" className="space-y-4 mt-4">
+        <TabsContent value="members" className="mt-6 space-y-4">
           {members.length === 0 ? (
-            <Card className="flex flex-col items-center justify-center p-8 text-center">
-              <div className="rounded-full bg-muted p-3 mb-4">
-                <Shield className="h-8 w-8 text-muted-foreground" />
+            <Card className="flex flex-col items-center justify-center p-8 text-center bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+              <div className="rounded-full bg-gray-100 dark:bg-gray-700 p-3 mb-4">
+                <Shield className="h-8 w-8 text-gray-500 dark:text-gray-400" />
               </div>
-              <h3 className="text-lg font-medium mb-2">No members found</h3>
-              <p className="text-muted-foreground max-w-md mb-4">
+              <h3 className="text-lg font-medium mb-2 text-gray-900 dark:text-gray-100">
+                No members found
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400 max-w-md mb-4">
                 {isOwner ? "You're currently the only member of this workspace. Invite others to collaborate!" : "No other members are in this workspace yet."}
               </p>
               {canManageMembers && (
-                <Button onClick={() => setInviteDialogOpen(true)}>
+                <Button 
+                  onClick={() => setInviteDialogOpen(true)}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                >
                   <UserPlus className="h-4 w-4 mr-2" />
                   Invite People
                 </Button>
@@ -527,33 +543,33 @@ export function MembersList({ workspaceId }: { workspaceId: string }) {
               {members.map((member) => (
                 <div
                   key={member.id}
-                  className="flex items-center justify-between p-3 bg-muted/40 rounded-lg hover:bg-muted/60 transition-colors"
+                  className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors"
                 >
                   <div className="flex items-center gap-3">
-                    <Avatar>
+                    <Avatar className="h-10 w-10">
                       {member.user.image ? (
                         <AvatarImage src={member.user.image} alt={member.user.name || member.user.email} />
                       ) : (
-                        <AvatarFallback>
+                        <AvatarFallback className="bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100">
                           {getInitials(member.user.name, member.user.email)}
                         </AvatarFallback>
                       )}
                     </Avatar>
                     
                     <div>
-                      <div className="font-medium flex items-center gap-2">
+                      <div className="font-medium flex items-center gap-2 flex-wrap text-gray-900 dark:text-gray-100">
                         {member.user.name || member.user.email}
                         {member.user.id === currentUserId && (
                           <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
                             You
                           </span>
                         )}
-                        <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
+                        <span className="inline-flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400">
                           {getRoleIcon(member.role)}
                           {getRoleLabel(member.role)}
                         </span>
                       </div>
-                      <div className="flex text-sm text-muted-foreground gap-4">
+                      <div className="flex flex-col sm:flex-row text-sm text-gray-600 dark:text-gray-400 gap-2 sm:gap-4 mt-1">
                         {member.user.name && (
                           <span>{member.user.email}</span>
                         )}
@@ -562,19 +578,27 @@ export function MembersList({ workspaceId }: { workspaceId: string }) {
                     </div>
                   </div>
 
-                  {/* Action buttons */}
-                  <div className="flex items-center gap-2">
-                    {/* Show options if user has proper permissions */}
+                  <div className="flex items-center gap-2 mt-3 ml-auto lg:ml-0 sm:mt-0">
                     {((isOwner && member.role !== "OWNER") || 
                       (currentUserRole === "ADMIN" && member.role === "MEMBER" && member.user.id !== currentUserId)) && (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            className="text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          >
                             <MoreHorizontal className="h-4 w-4" />
+                            <span className="sr-only">Member actions</span>
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Member Actions</DropdownMenuLabel>
+                        <DropdownMenuContent 
+                          align="end" 
+                          className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700"
+                        >
+                          <DropdownMenuLabel className="text-gray-900 dark:text-gray-100">
+                            Member Actions
+                          </DropdownMenuLabel>
                           
                           {isOwner && (
                             <>
@@ -583,15 +607,16 @@ export function MembersList({ workspaceId }: { workspaceId: string }) {
                                   member.userId, 
                                   member.role === "ADMIN" ? "MEMBER" : "ADMIN"
                                 )}
+                                className="text-gray-900 dark:text-gray-100 focus:bg-gray-100 dark:focus:bg-gray-700"
                               >
                                 {member.role === "ADMIN" ? "Demote to Member" : "Promote to Admin"}
                               </DropdownMenuItem>
-                              <DropdownMenuSeparator />
+                              <DropdownMenuSeparator className="bg-gray-200 dark:bg-gray-700" />
                             </>
                           )}
                           
                           <DropdownMenuItem
-                            className="text-destructive focus:text-destructive"
+                            className="text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400 focus:bg-red-50 dark:focus:bg-red-900/10"
                             onClick={() => {
                               setMemberToRemove(member.userId);
                               setRemoveDialogOpen(true);
@@ -604,12 +629,12 @@ export function MembersList({ workspaceId }: { workspaceId: string }) {
                       </DropdownMenu>
                     )}
 
-                    {/* Self-leave option */}
                     {member.user.id === currentUserId && member.role !== "OWNER" && (
                       <Button 
                         variant="outline" 
                         size="sm"
                         onClick={() => setLeaveDialogOpen(true)}
+                        className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
                       >
                         <LogOut className="h-4 w-4 mr-2" />
                         Leave
@@ -622,18 +647,23 @@ export function MembersList({ workspaceId }: { workspaceId: string }) {
           )}
         </TabsContent>
         
-        <TabsContent value="pending" className="mt-4">
+        <TabsContent value="pending" className="mt-6 space-y-4">
           {invitations.length === 0 ? (
-            <Card className="flex flex-col items-center justify-center p-8 text-center">
-              <div className="rounded-full bg-muted p-3 mb-4">
-                <Mail className="h-8 w-8 text-muted-foreground" />
+            <Card className="flex flex-col items-center justify-center p-8 text-center bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+              <div className="rounded-full bg-gray-100 dark:bg-gray-700 p-3 mb-4">
+                <Mail className="h-8 w-8 text-gray-500 dark:text-gray-400" />
               </div>
-              <h3 className="text-lg font-medium mb-2">No pending invitations</h3>
-              <p className="text-muted-foreground max-w-md mb-4">
+              <h3 className="text-lg font-medium mb-2 text-gray-900 dark:text-gray-100">
+                No pending invitations
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400 max-w-md mb-4">
                 There are no pending invitations to join this workspace.
               </p>
               {canManageMembers && (
-                <Button onClick={() => setInviteDialogOpen(true)}>
+                <Button 
+                  onClick={() => setInviteDialogOpen(true)}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                >
                   <UserPlus className="h-4 w-4 mr-2" />
                   Invite People
                 </Button>
@@ -644,24 +674,24 @@ export function MembersList({ workspaceId }: { workspaceId: string }) {
               {invitations.map((invitation) => (
                 <div
                   key={invitation.id}
-                  className="flex items-center justify-between p-3 bg-muted/40 rounded-lg"
+                  className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"
                 >
                   <div className="flex items-center gap-3">
-                    <Avatar>
-                      <AvatarFallback>
+                    <Avatar className="h-10 w-10">
+                      <AvatarFallback className="bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100">
                         {invitation.email.substring(0, 2).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     
                     <div>
-                      <div className="font-medium flex items-center gap-2">
+                      <div className="font-medium flex items-center gap-2 flex-wrap text-gray-900 dark:text-gray-100">
                         {invitation.email}
-                        <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
+                        <span className="inline-flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400">
                           {getRoleIcon(invitation.role)}
                           {getRoleLabel(invitation.role)}
                         </span>
                       </div>
-                      <div className="text-sm text-muted-foreground flex items-center gap-3">
+                      <div className="flex flex-col sm:flex-row text-sm text-gray-600 dark:text-gray-400 gap-2 sm:gap-3 mt-1">
                         <span>Sent {getTimeSince(invitation.createdAt)}</span>
                         <span className="flex items-center gap-1">
                           <Clock className="h-3 w-3" />
@@ -671,16 +701,17 @@ export function MembersList({ workspaceId }: { workspaceId: string }) {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 mt-3 sm:mt-0">
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => handleCopyInvitationLink(invitation.id, invitation.token)}
                       disabled={invitationCopied && copiedInvitation === invitation.id}
+                      className="text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
                     >
                       {invitationCopied && copiedInvitation === invitation.id ? (
                         <>
-                          <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
+                          <CheckCircle className="h-4 w-4 mr-2 text-green-500 dark:text-green-400" />
                           Copied
                         </>
                       ) : (
@@ -698,9 +729,10 @@ export function MembersList({ workspaceId }: { workspaceId: string }) {
                         setInvitationToCancel(invitation.id);
                         setCancelDialogOpen(true);
                       }}
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      className="text-red-600 dark:text-red-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10"
                     >
                       <Trash2 className="h-4 w-4" />
+                      <span className="sr-only">Cancel invitation</span>
                     </Button>
                   </div>
                 </div>
@@ -710,21 +742,24 @@ export function MembersList({ workspaceId }: { workspaceId: string }) {
         </TabsContent>
       </Tabs>
 
-      {/* Remove member confirmation dialog */}
       <AlertDialog open={removeDialogOpen} onOpenChange={setRemoveDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove member</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="text-gray-900 dark:text-gray-100">
+              Remove member
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-600 dark:text-gray-400">
               Are you sure you want to remove this member from the workspace? 
               They will lose access to all resources in this workspace.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800">
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleRemoveMember}
-              className="bg-destructive hover:bg-destructive/90"
+              className="bg-red-600 hover:bg-red-700 text-white"
             >
               Remove
             </AlertDialogAction>
@@ -732,21 +767,24 @@ export function MembersList({ workspaceId }: { workspaceId: string }) {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Leave workspace confirmation dialog */}
       <AlertDialog open={leaveDialogOpen} onOpenChange={setLeaveDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
           <AlertDialogHeader>
-            <AlertDialogTitle>Leave workspace</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="text-gray-900 dark:text-gray-100">
+              Leave workspace
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-600 dark:text-gray-400">
               Are you sure you want to leave this workspace? 
               You will lose access to all resources in this workspace unless you are invited back.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800">
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleLeaveWorkspace}
-              className="bg-destructive hover:bg-destructive/90"
+              className="bg-red-600 hover:bg-red-700 text-white"
             >
               Leave
             </AlertDialogAction>
@@ -754,21 +792,24 @@ export function MembersList({ workspaceId }: { workspaceId: string }) {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Cancel invitation confirmation dialog */}
       <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
           <AlertDialogHeader>
-            <AlertDialogTitle>Cancel invitation</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="text-gray-900 dark:text-gray-100">
+              Cancel invitation
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-600 dark:text-gray-400">
               Are you sure you want to cancel this invitation? 
               The invitation link will no longer work.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800">
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleCancelInvitation}
-              className="bg-destructive hover:bg-destructive/90"
+              className="bg-red-600 hover:bg-red-700 text-white"
             >
               Cancel invitation
             </AlertDialogAction>
@@ -777,4 +818,6 @@ export function MembersList({ workspaceId }: { workspaceId: string }) {
       </AlertDialog>
     </div>
   );
-}
+});
+
+MembersList.displayName = 'MembersList';

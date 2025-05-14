@@ -86,6 +86,7 @@ model Workspace {
   updatedAt DateTime? @updatedAt
   members WorkspaceMember[]
   invitations Invitation[]
+  analyticsCaches AnalyticsCache[]
 }
 
 model Board {
@@ -97,6 +98,7 @@ model Board {
   order       Int       @default(0)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime? @updatedAt
+  completedAt DateTime?
 }
 
 model List {
@@ -121,6 +123,7 @@ model Card {
   completed   Boolean     @default(false)
   createdAt   DateTime    @default(now())
   updatedAt   DateTime?   @updatedAt
+  completedAt DateTime?
 
   status      CardStatus  @default(TODO)
   assignees   User[]      @relation("CardAssignees")
@@ -164,4 +167,14 @@ model Notification {
   linkTo      String?   // URL to redirect when clicked
   createdAt   DateTime  @default(now())
   relatedId   String?   // ID of related entity (taskId, workspaceId, etc.)
+}
+
+model AnalyticsCache {
+  id            String   @id @default(cuid())
+  workspaceId   String
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  dataType      String   // "PRODUCTIVITY", "COMPLETION_RATE", etc.
+  data          Json
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }

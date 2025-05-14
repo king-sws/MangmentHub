@@ -1,11 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+// lib/subscription-actions.ts
 "use server";
+
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
 import { addDays } from "date-fns";
 import { PlanType } from "@/lib/plans";
-import { createCheckoutSession } from "@/actions/stripe";
+import { createCheckoutSession, verifyCheckoutSession, stripe } from "@/actions/stripe";
 
 // Get current user's subscription
 export async function getCurrentSubscription() {
@@ -34,7 +36,6 @@ export async function getCurrentSubscription() {
   return user;
 }
 
-// Create a Stripe checkout session for subscription
 // Create a Stripe checkout session for subscription
 export async function createSubscriptionCheckout(plan: PlanType) {
   const session = await auth();
@@ -68,6 +69,46 @@ export async function createSubscriptionCheckout(plan: PlanType) {
   } catch (error) {
     console.error("Failed to create checkout session:", error);
     throw new Error(`Failed to create checkout session: ${(error as Error).message}`);
+  }
+}
+
+// Verify and confirm a Stripe checkout session
+export async function confirmSubscriptionCheckout(sessionId: string) {
+  const session = await auth();
+ 
+  if (!session?.user?.id) {
+    throw new Error("Unauthorized");
+  }
+
+  try {
+    // Verify the checkout session with Stripe
+    const checkoutSession = await verifyCheckoutSession(sessionId);
+    
+    if (!checkoutSession || checkoutSession.payment_status !== 'paid') {
+      throw new Error("Payment incomplete or session invalid");
+    }
+
+    // Extract metadata from the session
+    const { plan, userId } = checkoutSession.metadata as { plan: PlanType; userId: string };
+    
+    // Verify that the session belongs to the current user
+    if (userId !== session.user.id) {
+      throw new Error("Session does not belong to current user");
+    }
+
+    // Get customer and subscription IDs from the session
+    const customerId = checkoutSession.customer as string;
+    const subscriptionId = checkoutSession.subscription as string;
+
+    // Update user subscription
+    return updateSubscription(plan, {
+      stripeCustomerId: customerId,
+      stripeSubscriptionId: subscriptionId,
+      paymentId: sessionId
+    });
+  } catch (error) {
+    console.error("Failed to confirm checkout session:", error);
+    throw new Error(`Failed to confirm subscription: ${(error as Error).message}`);
   }
 }
 
@@ -143,9 +184,6 @@ export async function cancelSubscription() {
     });
     
     if (user?.stripeSubscriptionId) {
-      // Import stripe dynamically to avoid circular dependencies
-      const { stripe } = await import("@/actions/stripe");
-      
       // Cancel subscription in Stripe
       await stripe.subscriptions.update(user.stripeSubscriptionId, {
         cancel_at_period_end: true,
@@ -166,47 +204,4 @@ export async function cancelSubscription() {
     console.error("Failed to cancel subscription:", error);
     throw new Error("Failed to cancel subscription");
   }
-}
-
-// Check if user can create more workspaces based on their plan
-export async function canCreateWorkspace() {
-  const session = await auth();
- 
-  if (!session?.user?.id) {
-    throw new Error("Unauthorized");
-  }
- 
-  // Get user with plan details
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: {
-      plan: true,
-      planExpires: true,
-    },
-  });
- 
-  if (!user) {
-    throw new Error("User not found");
-  }
- 
-  // Get workspace count
-  const workspaceCount = await prisma.workspace.count({
-    where: { userId: session.user.id },
-  });
- 
-  // Import dynamically to avoid circular dependencies
-  const { getWorkspaceLimit, getEffectivePlan } = await import("@/lib/plans");
- 
-  // Determine effective plan (accounting for expiration)
-  const effectivePlan = getEffectivePlan(user.plan as PlanType, user.planExpires);
- 
-  // Get workspace limit based on effective plan
-  const limit = getWorkspaceLimit(effectivePlan);
- 
-  return {
-    canCreate: workspaceCount < limit,
-    current: workspaceCount,
-    limit: limit,
-    plan: effectivePlan
-  };
 }
