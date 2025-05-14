@@ -11,6 +11,15 @@ const nextConfig: NextConfig = {
       eslint: {
         ignoreDuringBuilds: true,
       },
+    experimental: {
+    // Add supported experimental options here if needed
+  },
+  
+  // You can also try this method
+  output: 'standalone',
+  
+  // This option tells Next.js not to prerender specific paths
+  unstable_excludeFiles: ['**/settings/subscription/**'],
     
 };
 
