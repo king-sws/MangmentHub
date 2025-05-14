@@ -94,7 +94,7 @@ export default function SubscriptionPage() {
       toast("Checkout Canceled");
       router.replace("/settings/subscription");
     }
-  }, [success, sessionId, canceled, router, toast]);
+  }, [success, sessionId, canceled, router]);
 
   // Handle subscription changes
   const handleSubscribe = async (plan: PlanType) => {
