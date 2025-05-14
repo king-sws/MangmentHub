@@ -31,31 +31,36 @@ export default function SubscriptionPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   
-  const success = searchParams.get("success");
-  const canceled = searchParams.get("canceled");
-  const sessionId = searchParams.get("session_id");
+  // Only access search params on the client
+  const success = searchParams ? searchParams.get("success") : null;
+  const canceled = searchParams ? searchParams.get("canceled") : null;
+  const sessionId = searchParams ? searchParams.get("session_id") : null;
 
   // Fetch current subscription on mount
   useEffect(() => {
     async function fetchSubscription() {
       try {
         const subscription = await getCurrentSubscription();
-        setCurrentPlan(subscription.plan as PlanType);
-        setPlanExpires(subscription.planExpires);
-        setStripeCustomerId(subscription.stripeCustomerId);
         
-        // Extract user ID from the URL or session
-        // This is a placeholder - you'll need to adjust based on your auth setup
-        try {
-          const res = await fetch("/api/auth/session");
-          const session = await res.json();
-          if (session?.user?.id) {
-            setUserId(session.user.id);
+        if (subscription) {
+          setCurrentPlan(subscription.plan as PlanType);
+          setPlanExpires(subscription.planExpires ? new Date(subscription.planExpires) : null);
+          setStripeCustomerId(subscription.stripeCustomerId);
+          
+          // Extract user ID from the URL or session
+          try {
+            const res = await fetch("/api/auth/session");
+            const session = await res.json();
+            if (session?.user?.id) {
+              setUserId(session.user.id);
+            }
+          } catch (error) {
+            console.warn("Session fetch failed, continuing without user ID");
           }
-        } catch (error) {
-          console.warn("Session fetch failed, continuing without user ID");
+        } else {
+          // Default to FREE plan if no subscription found
+          setCurrentPlan("FREE");
         }
-
         
         setIsLoading(false);
       } catch (error) {
@@ -80,11 +85,13 @@ export default function SubscriptionPage() {
           
           // Refresh subscription details
           const subscription = await getCurrentSubscription();
-          setCurrentPlan(subscription.plan as PlanType);
-          setPlanExpires(subscription.planExpires);
-          setStripeCustomerId(subscription.stripeCustomerId);
+          if (subscription) {
+            setCurrentPlan(subscription.plan as PlanType);
+            setPlanExpires(subscription.planExpires ? new Date(subscription.planExpires) : null);
+            setStripeCustomerId(subscription.stripeCustomerId);
+          }
           
-          // Clear URL parameters
+          // Clean URL parameters
           router.replace("/settings/subscription");
         } catch (error) {
           console.error("Failed to verify checkout:", error);
@@ -118,9 +125,11 @@ export default function SubscriptionPage() {
       } else {
         const result = await createSubscriptionCheckout(plan);
         
-        if ('url' in result && result.url) {
+        if (result && 'url' in result && result.url) {
           window.location.href = result.url;
           return;
+        } else {
+          throw new Error("Invalid checkout response");
         }
       }
     } catch (error) {
@@ -140,12 +149,14 @@ export default function SubscriptionPage() {
     }
 
     setIsProcessing(true);
+    // Add your billing portal redirect logic here
+    setIsProcessing(false);
   };
 
   // Helper to format date
   const formatDate = (date: Date | null) => {
     if (!date) return "N/A";
-    return new Date(date).toLocaleDateString('en-US', {
+    return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric'
@@ -205,15 +216,15 @@ export default function SubscriptionPage() {
             <div>
               <p className="text-gray-600">Plan</p>
               <p className="text-lg font-medium flex items-center">
-                {currentPlan}
-                {currentPlan !== "FREE" && (
+                {currentPlan || "FREE"}
+                {currentPlan && currentPlan !== "FREE" && (
                   <Badge className="ml-2" variant="outline">
-                    ${PLAN_PRICES[currentPlan as PlanType]}/month
+                    ${PLAN_PRICES[currentPlan]}/month
                   </Badge>
                 )}
               </p>
             </div>
-            {currentPlan !== "FREE" && (
+            {currentPlan && currentPlan !== "FREE" && (
               <div>
                 <p className="text-gray-600">Expires</p>
                 <p className="text-lg font-medium">{formatDate(planExpires)}</p>
@@ -221,7 +232,7 @@ export default function SubscriptionPage() {
             )}
           </div>
           
-          {currentPlan !== "FREE" && stripeCustomerId && (
+          {currentPlan && currentPlan !== "FREE" && stripeCustomerId && (
             <div className="mt-4 pt-4 border-t border-gray-200">
               <Button
                 variant="outline"
