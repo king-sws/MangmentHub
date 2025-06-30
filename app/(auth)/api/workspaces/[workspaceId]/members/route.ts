@@ -1,4 +1,4 @@
-// api/workspaces/[workspaceId]/members/route.ts
+// Updated api/workspaces/[workspaceId]/members/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
@@ -9,6 +9,7 @@ import {
   notifyNewMember, 
   notifyRoleChange 
 } from "@/lib/notifications";
+import { PlanType, getEffectivePlan, getMemberLimit } from "@/lib/plans";
 
 // GET — List all members and invitations
 export async function GET(
@@ -23,6 +24,30 @@ export async function GET(
   }
 
   try {
+    // Get workspace with owner details
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      include: {
+        user: {
+          select: {
+            plan: true,
+            planExpires: true,
+          }
+        }
+      }
+    });
+
+    if (!workspace) {
+      return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+    }
+
+    // Get effective plan and member limit
+    const effectivePlan = getEffectivePlan(
+      workspace.user.plan as PlanType, 
+      workspace.user.planExpires
+    );
+    const memberLimit = getMemberLimit(effectivePlan);
+
     // Get all members of the workspace
     const members = await prisma.workspaceMember.findMany({
       where: { workspaceId },
@@ -45,11 +70,18 @@ export async function GET(
       },
     });
 
-    // Return all needed data
+    // Return all needed data including subscription info
     return NextResponse.json({
       members,
       invitations,
       currentUserRole: currentMember?.role || "MEMBER",
+      subscription: {
+        plan: effectivePlan,
+        memberLimit,
+        currentMemberCount: members.length,
+        canAddMore: members.length < memberLimit,
+        remainingSlots: Math.max(0, memberLimit - members.length)
+      }
     });
   } catch (error) {
     console.error("Error fetching workspace data:", error);
@@ -60,7 +92,7 @@ export async function GET(
   }
 }
 
-// POST — Invite new member
+// POST — Invite new member with subscription limits
 export async function POST(
   req: Request,
   { params }: { params: { workspaceId: string } }
@@ -88,18 +120,46 @@ export async function POST(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Get workspace info for notifications
+    // Get workspace with owner subscription details
     const workspace = await prisma.workspace.findUnique({
       where: { id: workspaceId },
       include: {
         user: {
-          select: { id: true, name: true }
+          select: { 
+            id: true, 
+            name: true,
+            plan: true,
+            planExpires: true
+          }
         }
       }
     });
 
     if (!workspace) {
       return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+    }
+
+    // Check subscription limits
+    const effectivePlan = getEffectivePlan(
+      workspace.user.plan as PlanType, 
+      workspace.user.planExpires
+    );
+    const memberLimit = getMemberLimit(effectivePlan);
+
+    // Count current members
+    const currentMemberCount = await prisma.workspaceMember.count({
+      where: { workspaceId }
+    });
+
+    // Check if adding this member would exceed the limit
+    if (currentMemberCount >= memberLimit) {
+      return NextResponse.json({ 
+        error: `Member limit reached for ${effectivePlan} plan (${currentMemberCount}/${memberLimit}). Please upgrade to add more members.`,
+        code: "MEMBER_LIMIT_EXCEEDED",
+        limit: memberLimit,
+        current: currentMemberCount,
+        plan: effectivePlan
+      }, { status: 403 });
     }
 
     // Get the inviter's name
@@ -137,7 +197,13 @@ export async function POST(
       
       return NextResponse.json({ 
         success: true, 
-        member: newMember 
+        member: newMember,
+        subscription: {
+          plan: effectivePlan,
+          memberLimit,
+          currentMemberCount: currentMemberCount + 1,
+          remainingSlots: memberLimit - (currentMemberCount + 1)
+        }
       });
     }
 
@@ -188,7 +254,13 @@ export async function POST(
     return NextResponse.json({ 
       success: true,
       invitation,
-      emailDelivered
+      emailDelivered,
+      subscription: {
+        plan: effectivePlan,
+        memberLimit,
+        currentMemberCount: currentMemberCount,
+        remainingSlots: memberLimit - currentMemberCount - 1 // -1 for the pending invitation
+      }
     });
 
   } catch (error) {
@@ -200,7 +272,7 @@ export async function POST(
   }
 }
 
-// PATCH — Update member role
+// PATCH — Update member role (unchanged, but could add subscription checks)
 export async function PATCH(
   req: Request,
   { params }: { params: { workspaceId: string } }
@@ -293,7 +365,7 @@ export async function PATCH(
   }
 }
 
-// DELETE — Remove member or cancel invitation
+// DELETE — Remove member or cancel invitation (unchanged)
 export async function DELETE(
   req: Request,
   { params }: { params: { workspaceId: string } }
@@ -305,7 +377,6 @@ export async function DELETE(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   
-  // Can delete either a member or an invitation
   const { memberId, invitationId } = await req.json();
 
   try {
@@ -324,7 +395,6 @@ export async function DELETE(
 
     // Handle member removal
     if (memberId) {
-      // Can't remove yourself this way
       if (session.user.id === memberId) {
         return NextResponse.json(
           { error: "Can't remove yourself" },
@@ -332,7 +402,6 @@ export async function DELETE(
         );
       }
 
-      // Check if target is an owner (only another owner can remove an owner)
       const targetMember = await prisma.workspaceMember.findUnique({
         where: {
           userId_workspaceId: {
@@ -349,7 +418,6 @@ export async function DELETE(
         );
       }
 
-      // Remove the member
       await prisma.workspaceMember.delete({
         where: {
           userId_workspaceId: {
@@ -364,7 +432,6 @@ export async function DELETE(
     
     // Handle invitation cancellation
     if (invitationId) {
-      // Check if invitation exists
       const invitation = await prisma.invitation.findUnique({
         where: { id: invitationId }
       });
@@ -373,7 +440,6 @@ export async function DELETE(
         return NextResponse.json({ error: "Invitation not found" }, { status: 404 });
       }
 
-      // Delete the invitation
       await prisma.invitation.delete({
         where: { id: invitationId }
       });

@@ -5,12 +5,17 @@ import { redirect } from "next/navigation";
 import { Metadata } from "next";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { Skeleton } from "@/components/ui/skeleton";
 import { getWorkspaces } from "@/actions/workspace";
 import { MembersList } from "@/components/MembersList";
 import { SettingsForm } from "./_components/SettingsForm";
 import { NotificationSettings } from "./_components/NotificationSettings";
 import { WorkspaceSettings } from "./_components/WorkspaceSettings";
+import { WorkspaceSelector } from "./_components/WorkspaceSelector";
+import { Building2, User, Users, Bell } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 
 export const metadata: Metadata = {
   title: "Account Settings",
@@ -21,17 +26,22 @@ export const metadata: Metadata = {
 function SettingsSkeleton() {
   return (
     <div className="space-y-6">
-      <Skeleton className="h-8 w-64" />
-      <div className="space-y-4">
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-10 w-full" />
+      <div className="space-y-3">
+        <div className="h-4 bg-muted animate-pulse rounded w-32" />
+        <div className="h-12 bg-muted animate-pulse rounded" />
       </div>
+      <div className="h-48 bg-muted animate-pulse rounded" />
     </div>
   );
 }
 
-export default async function SettingsPage({ params }: { params: { userId: string } }) {
+export default async function SettingsPage({ 
+  params,
+  searchParams 
+}: { 
+  params: { userId: string };
+  searchParams: { workspace?: string };
+}) {
   const session = await auth();
   
   // Authentication check
@@ -41,7 +51,12 @@ export default async function SettingsPage({ params }: { params: { userId: strin
   
   // Get user's workspaces
   const workspaces = await getWorkspaces();
-  const mainWorkspace = workspaces.find(w => w.name === "Main Workspace") || workspaces[0];
+  
+  // Determine selected workspace
+  const selectedWorkspaceId = searchParams.workspace;
+  const selectedWorkspace = selectedWorkspaceId 
+    ? workspaces.find(w => w.id === selectedWorkspaceId)
+    : workspaces[0]; // Default to first workspace if none specified
   
   return (
     <div className="container max-w-6xl mx-auto py-6 px-4 md:px-6">
@@ -63,109 +78,194 @@ export default async function SettingsPage({ params }: { params: { userId: strin
             <TabsTrigger value="notifications" className="px-2 sm:px-4 py-2 text-sm">Notifications</TabsTrigger>
           </TabsList>
           
-          {/* TabsContent Component with Dark Mode Support */}
+          {/* Account Tab */}
           <TabsContent value="account" className="space-y-6">
-            <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-              <Suspense fallback={<SettingsSkeleton />}>
-                <SettingsForm />
-              </Suspense>
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="workspace" className="space-y-6">
-            <div className="bg-white dark:bg-gray-800 p-3 sm:p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-              <Suspense fallback={<SettingsSkeleton />}>
-                {mainWorkspace ? (
-                  <WorkspaceSettings workspaceId={mainWorkspace.id} />
-                ) : (
-                  <div className="text-center py-6 sm:py-8 text-muted-foreground">
-                    No workspace found. Create a workspace to manage its settings.
+            <Card className="border-0 shadow-sm bg-card">
+              <CardHeader className="border-b border-border pb-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <User className="h-5 w-5 text-primary" />
                   </div>
-                )}
-              </Suspense>
-            </div>
-          </TabsContent>
-          
-          <TabsContent 
-            value="members" 
-            className="mt-6 space-y-6"
-            aria-label="Workspace members tab"
-          >
-            <div className="
-              bg-white 
-              dark:bg-gray-800 
-              p-4 sm:p-6 
-              rounded-lg 
-              border 
-              border-gray-200 
-              dark:border-gray-700 
-              shadow-sm 
-              transition-all 
-              duration-200 
-              hover:shadow-md
-            ">
-              <Suspense fallback={(
-                <div className="space-y-6 animate-in fade-in duration-300">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <Skeleton className="h-8 w-48 rounded-lg bg-gray-200 dark:bg-gray-700" />
-                    <Skeleton className="h-9 w-32 rounded-lg bg-gray-200 dark:bg-gray-700" />
-                  </div>
-                  <Skeleton className="h-10 w-full rounded-lg bg-gray-200 dark:bg-gray-700" />
-                  <div className="space-y-3">
-                    {[1, 2, 3].map((i) => (
-                      <Skeleton key={i} className="h-16 w-full rounded-lg bg-gray-200 dark:bg-gray-700" />
-                    ))}
+                  <div>
+                    <CardTitle className="text-xl">Account Settings</CardTitle>
+                    <CardDescription className="text-sm text-muted-foreground mt-1">
+                      Manage your personal account information and preferences
+                    </CardDescription>
                   </div>
                 </div>
-              )}>
-                {mainWorkspace ? (
-                  <MembersList workspaceId={mainWorkspace.id} />
-                ) : (
-                  <div className="
-                    text-center 
-                    py-12 
-                    text-gray-500 
-                    dark:text-gray-400 
-                    flex 
-                    flex-col 
-                    items-center 
-                    gap-4
-                    animate-in 
-                    fade-in 
-                    duration-300
-                  ">
-                    <svg
-                      className="h-12 w-12 text-gray-400 dark:text-gray-500"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      aria-hidden="true"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h-2m-6 0H7m2-2h6"
-                      />
-                    </svg>
-                    <p className="text-base font-medium">
-                      No workspace found
-                    </p>
-                    <p className="text-sm max-w-md">
-                      Create a workspace to start managing members and collaborating with your team.
-                    </p>
-                  </div>
-                )}
-              </Suspense>
-            </div>
+              </CardHeader>
+              
+              <CardContent className="pt-6">
+                <Suspense fallback={<SettingsSkeleton />}>
+                  <SettingsForm />
+                </Suspense>
+              </CardContent>
+            </Card>
           </TabsContent>
           
+          {/* Workspace Tab */}
+          <TabsContent value="workspace" className="space-y-6">
+            <Card className="border-0 shadow-sm bg-card">
+              <CardHeader className="border-b border-border pb-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <Building2 className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl">Workspace Management</CardTitle>
+                    <CardDescription className="text-sm text-muted-foreground mt-1">
+                      Select and configure your workspace settings
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              
+              <CardContent className="pt-6">
+                <Suspense fallback={<SettingsSkeleton />}>
+                  {workspaces.length > 0 ? (
+                    <div className="space-y-8">
+                      {/* Enhanced Workspace Selector */}
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm font-medium text-foreground">
+                            Active Workspace
+                          </Label>
+                          {workspaces.length > 1 && (
+                            <Badge variant="secondary" className="text-xs">
+                              {workspaces.length} workspaces available
+                            </Badge>
+                          )}
+                        </div>
+                        <WorkspaceSelector
+                          workspaces={workspaces}
+                          selectedWorkspaceId={selectedWorkspace?.id}
+                          userId={params.userId}
+                        />
+                      </div>
+
+                      {/* Workspace Settings */}
+                      {selectedWorkspace ? (
+                        <div className="border-t border-border pt-8">
+                          <WorkspaceSettings workspaceId={selectedWorkspace.id} />
+                        </div>
+                      ) : (
+                        <Card className="border-dashed border-2 border-muted-foreground/25">
+                          <CardContent className="pt-6">
+                            <div className="text-center py-8">
+                              <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                              <h3 className="font-medium text-lg mb-2">Select a Workspace</h3>
+                              <p className="text-muted-foreground text-sm max-w-md mx-auto">
+                                Choose a workspace from the dropdown above to view and manage its settings.
+                              </p>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
+                    </div>
+                  ) : (
+                    <Card className="border-dashed border-2 border-muted-foreground/25">
+                      <CardContent className="pt-6">
+                        <div className="text-center py-12">
+                          <div className="p-4 rounded-full bg-muted mx-auto w-fit mb-4">
+                            <Building2 className="h-8 w-8 text-muted-foreground" />
+                          </div>
+                          <h3 className="font-medium text-lg mb-2">No Workspaces Found</h3>
+                          <p className="text-muted-foreground text-sm max-w-md mx-auto mb-6">
+                            You don&lsquo;t have any workspaces yet. Create your first workspace to get started with team collaboration.
+                          </p>
+                          <Button className="gap-2">
+                            <Building2 className="h-4 w-4" />
+                            Create Workspace
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </Suspense>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          {/* Members Tab */}
+          <TabsContent value="members" className="space-y-6">
+            <Card className="border-0 shadow-sm bg-card">
+              <CardHeader className="border-b border-border pb-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <Users className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl">Team Members</CardTitle>
+                    <CardDescription className="text-sm text-muted-foreground mt-1">
+                      Manage workspace members and their permissions
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              
+              <CardContent className="pt-6">
+                <Suspense fallback={<SettingsSkeleton />}>
+                  {workspaces.length > 0 && selectedWorkspace ? (
+                    <MembersList workspaceId={selectedWorkspace.id} />
+                  ) : workspaces.length > 0 ? (
+                    <Card className="border-dashed border-2 border-muted-foreground/25">
+                      <CardContent className="pt-6">
+                        <div className="text-center py-8">
+                          <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                          <h3 className="font-medium text-lg mb-2">No Active Workspace</h3>
+                          <p className="text-muted-foreground text-sm max-w-md mx-auto">
+                            Switch to the Workspace tab to select an active workspace first.
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <Card className="border-dashed border-2 border-muted-foreground/25">
+                      <CardContent className="pt-6">
+                        <div className="text-center py-12">
+                          <div className="p-4 rounded-full bg-muted mx-auto w-fit mb-4">
+                            <Users className="h-8 w-8 text-muted-foreground" />
+                          </div>
+                          <h3 className="font-medium text-lg mb-2">No Workspaces Found</h3>
+                          <p className="text-muted-foreground text-sm max-w-md mx-auto mb-6">
+                            Create a workspace to start managing members and collaborating with your team.
+                          </p>
+                          <Button className="gap-2">
+                            <Building2 className="h-4 w-4" />
+                            Create Workspace
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </Suspense>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          {/* Notifications Tab */}
           <TabsContent value="notifications" className="space-y-6">
-            <div className="bg-white p-6 rounded-lg shadow-sm border dark:bg-gray-800">
-              <Suspense fallback={<SettingsSkeleton />}>
-                <NotificationSettings userId={params.userId} />
-              </Suspense>
-            </div>
+            <Card className="border-0 shadow-sm bg-card">
+              <CardHeader className="border-b border-border pb-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <Bell className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl">Notification Settings</CardTitle>
+                    <CardDescription className="text-sm text-muted-foreground mt-1">
+                      Configure how and when you receive notifications
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              
+              <CardContent className="pt-6">
+                <Suspense fallback={<SettingsSkeleton />}>
+                  <NotificationSettings userId={params.userId} />
+                </Suspense>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>

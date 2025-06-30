@@ -7,6 +7,268 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id                   String            @id @default(cuid())
+  name                 String?
+  email                String            @unique
+  emailVerified        DateTime?
+  password             String?
+  image                String?
+  plan                 SubscriptionPlan  @default(FREE)
+  planExpires          DateTime?
+  planStarted          DateTime?
+  planUpdated          DateTime?
+  role                 UserRole          @default(USER)
+  stripeCustomerId     String?           @db.VarChar(255)
+  stripeSubscriptionId String?           @db.VarChar(255)
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime?         @updatedAt
+  lastLogin            DateTime?
+  accounts             Account[]
+  chatMessages         ChatMessage[]
+  chatReactions        ChatReaction[]
+  chatRoomMemberships  ChatRoomMember[]
+  FileStorage          FileStorage[]
+  notifications        Notification[]
+  sessions             Session[]
+  workspaces           Workspace[]
+  workspaceMemberships WorkspaceMember[]
+  assignedCards        Card[]            @relation("CardAssignees")
+
+  Transaction Transaction[]
+
+  PaymentFailure PaymentFailure[]
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  email     String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  used      Boolean  @default(false)
+
+  @@index([email])
+  @@index([token])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Workspace {
+  id              String            @id @default(cuid())
+  name            String
+  userId          String
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime?         @updatedAt
+  analyticsCaches AnalyticsCache[]
+  boards          Board[]
+  chatRooms       ChatRoom[]
+  invitations     Invitation[]
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  members         WorkspaceMember[]
+}
+
+model Board {
+  id          String    @id @default(cuid())
+  title       String
+  workspaceId String
+  order       Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime? @updatedAt
+  completedAt DateTime?
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  lists       List[]
+}
+
+model List {
+  id        String    @id @default(cuid())
+  title     String
+  boardId   String
+  order     Int       @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+  cards     Card[]
+  board     Board     @relation(fields: [boardId], references: [id], onDelete: Cascade)
+}
+
+model Card {
+  id          String      @id @default(cuid())
+  title       String
+  description String?     @db.Text
+  listId      String
+  list        List        @relation(fields: [listId], references: [id], onDelete: Cascade)
+  order       Int         @default(0)
+  dueDate     DateTime?
+  completed   Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime?   @updatedAt
+  completedAt DateTime?
+
+  status      CardStatus  @default(TODO)
+  assignees   User[]      @relation("CardAssignees")
+  priority    PriorityLevel @default(MEDIUM)
+}
+
+enum PriorityLevel {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+
+model WorkspaceMember {
+  id          String    @id @default(cuid())
+  userId      String
+  workspaceId String
+  role        String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  user        User      @relation(fields: [userId], references: [id])
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+
+  @@unique([userId, workspaceId])
+}
+
+model Invitation {
+  id          String    @id @default(cuid())
+  email       String
+  workspaceId String
+  role        String
+  token       String    @unique
+  expiresAt   DateTime
+  createdAt   DateTime  @default(now())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+
+  @@unique([email, workspaceId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      String
+  isRead    Boolean  @default(false)
+  linkTo    String?
+  createdAt DateTime @default(now())
+  relatedId String?
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AnalyticsCache {
+  id          String    @id @default(cuid())
+  workspaceId String
+  dataType    String
+  data        Json
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model ChatRoom {
+  id          String           @id @default(cuid())
+  name        String?
+  description String?
+  workspaceId String
+  isPrivate   Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  messages    ChatMessage[]
+  workspace   Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  members     ChatRoomMember[]
+}
+
+model ChatRoomMember {
+  id         String    @id @default(cuid())
+  chatRoomId String
+  userId     String
+  isAdmin    Boolean   @default(false)
+  joinedAt   DateTime  @default(now())
+  lastReadAt DateTime?
+  chatRoom   ChatRoom  @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([chatRoomId, userId])
+}
+
+model ChatMessage {
+  id              String           @id @default(cuid())
+  chatRoomId      String
+  userId          String
+  content         String
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  isEdited        Boolean          @default(false)
+  isSystemMessage Boolean          @default(false)
+  replyToId       String?
+  attachments     ChatAttachment[]
+  chatRoom        ChatRoom         @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
+  replyTo         ChatMessage?     @relation("Replies", fields: [replyToId], references: [id])
+  replies         ChatMessage[]    @relation("Replies")
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reactions       ChatReaction[]
+}
+
+model ChatReaction {
+  id        String      @id @default(cuid())
+  messageId String
+  userId    String
+  emoji     String
+  createdAt DateTime    @default(now())
+  message   ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId, emoji])
+}
+
+model ChatAttachment {
+  id        String      @id @default(cuid())
+  messageId String
+  fileName  String
+  fileType  String
+  fileSize  Int
+  fileUrl   String
+  createdAt DateTime    @default(now())
+  message   ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+}
+
+model FileStorage {
+  id        String   @id @default(cuid())
+  fileName  String
+  fileType  String
+  fileSize  Int
+  fileData  Bytes
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
 enum UserRole {
   USER
   ADMIN
@@ -26,155 +288,162 @@ enum SubscriptionPlan {
   BUSINESS
 }
 
-model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  emailVerified DateTime?
-  password      String?
-  image         String?
-  plan         SubscriptionPlan @default(FREE)
-  planExpires  DateTime?
-  planStarted  DateTime?
-  planUpdated  DateTime?
-  role          UserRole  @default(USER)
-  stripeCustomerId      String?   @db.VarChar(255)
-  stripeSubscriptionId  String?   @db.VarChar(255)
-  accounts      Account[]
-  sessions      Session[]
-  workspaces    Workspace[]
-  assignedCards Card[]    @relation("CardAssignees")
-  workspaceMemberships WorkspaceMember[]
-  notifications Notification[]
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime? @updatedAt
-  lastLogin     DateTime?
+model AuditLog {
+  id          String   @id @default(cuid())
+  event       String   // Event type (SUBSCRIPTION_UPDATE, ADMIN_LOGIN, etc.)
+  category    String   // Category (ADMIN, USER, SECURITY, SUBSCRIPTION)
+  adminId     String?  // Admin who performed the action
+  adminEmail  String?  // Admin email for easy reference
+  targetUserId String? // User who was affected
+  targetUserEmail String? // Target user email
+  changes     Json?    // What changed (before/after values)
+  metadata    Json?    // Additional context data
+  ip          String?  // IP address
+  userAgent   String?  // User agent
+  createdAt   DateTime @default(now())
+  
+  @@index([event])
+  @@index([adminId])
+  @@index([targetUserId])
+  @@index([createdAt])
+  @@index([category])
 }
 
-model Account {
-  id                String  @id @default(cuid())
+model SecurityEvent {
+  id          String   @id @default(cuid())
+  event       String   // UNAUTHORIZED_ACCESS, FAILED_LOGIN, etc.
+  severity    String   // LOW, MEDIUM, HIGH, CRITICAL
+  ip          String?
+  userAgent   String?
+  details     Json?
+  createdAt   DateTime @default(now())
+  
+  @@index([event])
+  @@index([severity])
+  @@index([createdAt])
+}
+
+// Add these models to your existing schema.prisma file
+
+model Transaction {
+  id                    String            @id @default(cuid())
+  userId                String
+  stripeTransactionId   String?           @db.VarChar(255)
+  paypalTransactionId   String?           @db.VarChar(255)
+  type                  TransactionType
+  status                TransactionStatus
+  amount                Decimal           @db.Decimal(10, 2)
+  currency              String            @default("USD") @db.VarChar(3)
+  description           String?
+  plan                  SubscriptionPlan?
+  planDuration          PlanDuration?
+  paymentMethod         PaymentMethod
+  stripePaymentIntentId String?           @db.VarChar(255)
+  stripeInvoiceId       String?           @db.VarChar(255)
+  failureReason         String?
+  refundAmount          Decimal?          @db.Decimal(10, 2)
+  refundReason          String?
+  refundedAt            DateTime?
+  metadata              Json?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  processedAt           DateTime?
+  
+  // Relations
+  user                  User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refunds               Refund[]
+  
+  @@index([userId])
+  @@index([status])
+  @@index([type])
+  @@index([createdAt])
+  @@index([stripeTransactionId])
+  @@index([paypalTransactionId])
+}
+
+model Refund {
+  id            String        @id @default(cuid())
+  transactionId String
+  amount        Decimal       @db.Decimal(10, 2)
+  reason        String
+  status        RefundStatus
+  stripeRefundId String?      @db.VarChar(255)
+  adminId       String?
+  adminEmail    String?
+  createdAt     DateTime      @default(now())
+  processedAt   DateTime?
+  
+  transaction   Transaction   @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  
+  @@index([transactionId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model PaymentFailure {
+  id                String   @id @default(cuid())
   userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String? @db.Text
-  session_state     String?
-  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  @@unique([provider, providerAccountId])
+  attemptedAmount   Decimal  @db.Decimal(10, 2)
+  currency          String   @default("USD") @db.VarChar(3)
+  paymentMethod     PaymentMethod
+  failureCode       String?
+  failureMessage    String?
+  stripeErrorCode   String?
+  retryCount        Int      @default(0)
+  lastRetryAt       DateTime?
+  resolvedAt        DateTime?
+  createdAt         DateTime @default(now())
+  
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([createdAt])
+  @@index([resolvedAt])
 }
 
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+enum TransactionType {
+  SUBSCRIPTION
+  ONE_TIME_PAYMENT
+  UPGRADE
+  DOWNGRADE
+  RENEWAL
+  REFUND
+  CHARGEBACK
+  ADJUSTMENT
 }
 
-model Workspace {
-  id      String   @id @default(cuid())
-  name    String
-  userId  String
-  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  boards  Board[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime? @updatedAt
-  members WorkspaceMember[]
-  invitations Invitation[]
-  analyticsCaches AnalyticsCache[]
+enum TransactionStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+  REFUNDED
+  PARTIALLY_REFUNDED
+  DISPUTED
 }
 
-model Board {
-  id          String    @id @default(cuid())
-  title       String
-  workspaceId String
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  lists       List[]
-  order       Int       @default(0)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime? @updatedAt
-  completedAt DateTime?
+enum PaymentMethod {
+  STRIPE_CARD
+  STRIPE_BANK
+  PAYPAL
+  APPLE_PAY
+  GOOGLE_PAY
+  MANUAL
+  CRYPTO
 }
 
-model List {
-  id        String   @id @default(cuid())
-  title     String
-  boardId   String
-  board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
-  cards     Card[]
-  order     Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime? @updatedAt
+enum RefundStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
 }
 
-model Card {
-  id          String      @id @default(cuid())
-  title       String
-  description String?     @db.Text
-  listId      String
-  list        List        @relation(fields: [listId], references: [id], onDelete: Cascade)
-  order       Int         @default(0)
-  dueDate     DateTime?
-  completed   Boolean     @default(false)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime?   @updatedAt
-  completedAt DateTime?
-
-  status      CardStatus  @default(TODO)
-  assignees   User[]      @relation("CardAssignees")
+enum PlanDuration {
+  MONTHLY
+  YEARLY
+  LIFETIME
 }
 
-model WorkspaceMember {
-  id        String   @id @default(cuid())
-  userId    String
-  workspaceId String
-  role      String  // "OWNER", "ADMIN", "MEMBER"
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user      User     @relation(fields: [userId], references: [id])
-  workspace Workspace @relation(fields: [workspaceId], references: [id])
-
-  @@unique([userId, workspaceId])
-}
-
-model Invitation {
-  id          String    @id @default(cuid())
-  email       String
-  workspaceId String
-  workspace   Workspace @relation(fields: [workspaceId], references: [id])
-  role        String
-  token       String    @unique
-  expiresAt   DateTime
-  createdAt   DateTime  @default(now())
-
-  @@unique([email, workspaceId])
-}
-
-model Notification {
-  id          String    @id @default(cuid())
-  userId      String
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title       String
-  message     String    @db.Text
-  type        String    // "TASK_ASSIGNED", "DUE_DATE", "INVITATION", etc.
-  isRead      Boolean   @default(false)
-  linkTo      String?   // URL to redirect when clicked
-  createdAt   DateTime  @default(now())
-  relatedId   String?   // ID of related entity (taskId, workspaceId, etc.)
-}
-
-model AnalyticsCache {
-  id            String   @id @default(cuid())
-  workspaceId   String
-  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  dataType      String   // "PRODUCTIVITY", "COMPLETION_RATE", etc.
-  data          Json
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-}

@@ -465,11 +465,14 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
           <div className="h-9 w-9 rounded-md bg-primary flex items-center justify-center text-white shadow-sm hover:shadow transition-all duration-300 hover:scale-105">
             <Laptop className="h-5 w-5 text-white dark:text-black " />
           </div>
-          <span className="font-semibold text-lg tracking-tight dark:text-white">ManageHub</span>
-        </Link>
+          <span className="text-gray-900 dark:text-white font-bold text-xl tracking-tight relative">
+          Blutto
+          {/* Subtle underline accent */}
+          <div className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-blue-600 to-purple-600 group-hover:w-full transition-all duration-300"></div>
+        </span>        </Link>
       </div>
       {/* Navigation Links */}
-      <div className="flex-1 overflow-y-auto py-3 px-3 space-y-6">
+      <div className="flex-1 overflow-y-auto py-3 px-3 space-y-6 hide-scrollbar">
         {/* Main Navigation */}
         <nav className="space-y-1 mt-2">
           {navigationLinks.map((link) => {

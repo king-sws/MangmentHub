@@ -5,8 +5,15 @@ import { prisma } from "@/lib/prisma";
 import Stripe from "stripe";
 import { addDays } from "date-fns";
 import { stripe, verifyStripeWebhookEvent } from "@/actions/stripe";
-import { SubscriptionPlan } from "@prisma/client";
+import { SubscriptionPlan, TransactionStatus, TransactionType, PaymentMethod, PlanDuration } from "@prisma/client";
 import { headers } from "next/headers";
+import { updateTransactionStatus, createTransaction } from "@/lib/transaction-helper";
+
+// Helper function to get plan duration (should match your subscription.ts)
+function getPlanDuration(plan: string): PlanDuration {
+  // Adjust this based on your actual plan structure
+  return "MONTHLY"; // or get from your plan configuration
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -38,32 +45,82 @@ export async function POST(req: NextRequest) {
         
         // Extract customer and metadata
         const customerId = session.customer as string;
-        const { plan, userId } = session.metadata as { plan: string; userId: string };
+        const { plan, userId, transactionId } = session.metadata as { 
+          plan: string; 
+          userId: string; 
+          transactionId?: string;
+        };
         
         if (!userId || !plan) {
-          console.error("Missing metadata in checkout session");
+          console.error("Missing metadata in checkout session", { userId, plan, sessionId: session.id });
           break;
         }
+
+        console.log(`Processing checkout completion for user: ${userId}, plan: ${plan}, transactionId: ${transactionId}`);
       
         // Get subscription ID from the session
         if (session.subscription) {
           const subscriptionId = session.subscription as string;
           const subscription = await stripe.subscriptions.retrieve(subscriptionId);
           
-          // Update user with subscription details
-          await prisma.user.update({
-            where: { id: userId },
-            data: {
-              plan: plan as SubscriptionPlan,
-              planStarted: new Date(),
-              planUpdated: new Date(),
-              planExpires: addDays(new Date(), 30), // 30-day subscription period
-              stripeCustomerId: customerId,
-              stripeSubscriptionId: subscriptionId,
-            },
-          });
+          try {
+            // Update user with subscription details
+            const updatedUser = await prisma.user.update({
+              where: { id: userId },
+              data: {
+                plan: plan as SubscriptionPlan,
+                planStarted: new Date(),
+                planUpdated: new Date(),
+                planExpires: addDays(new Date(), 30), // 30-day subscription period
+                stripeCustomerId: customerId,
+                stripeSubscriptionId: subscriptionId,
+              },
+            });
+            
+            console.log(`Successfully updated user ${userId} plan to ${plan}`, {
+              userId: updatedUser.id,
+              plan: updatedUser.plan,
+              planStarted: updatedUser.planStarted,
+              planExpires: updatedUser.planExpires
+            });
+            
+            // Update transaction if we have the ID
+            if (transactionId) {
+              const updatedTransaction = await updateTransactionStatus(transactionId, TransactionStatus.COMPLETED, {
+                stripeCustomerId: customerId,
+                stripeSubscriptionId: subscriptionId,
+                stripeSessionId: session.id,
+                completedAt: new Date(),
+              });
+              console.log(`Transaction ${transactionId} marked as completed`);
+            } else {
+              console.warn(`No transactionId found in metadata for session ${session.id}`);
+            }
+            
+          } catch (error) {
+            console.error(`Failed to update user ${userId} subscription:`, error);
+            
+            // If transaction update fails, mark transaction as failed
+            if (transactionId) {
+              try {
+                await updateTransactionStatus(transactionId, TransactionStatus.FAILED, {
+                  error: "Failed to update user subscription",
+                  failureReason: (error as Error).message,
+                });
+              } catch (transactionError) {
+                console.error(`Failed to update transaction status:`, transactionError);
+              }
+            }
+          }
+        } else {
+          console.error(`No subscription found in checkout session ${session.id}`);
           
-          console.log(`Updated subscription for user ${userId} to plan ${plan}`);
+          // Mark transaction as failed if no subscription
+          if (transactionId) {
+            await updateTransactionStatus(transactionId, TransactionStatus.FAILED, {
+              error: "No subscription found in checkout session",
+            });
+          }
         }
         break;
       }
@@ -82,16 +139,44 @@ export async function POST(req: NextRequest) {
           });
           
           if (user) {
-            // Extend subscription period
-            await prisma.user.update({
-              where: { id: user.id },
-              data: {
-                planUpdated: new Date(),
-                planExpires: addDays(new Date(), 30), // Extend for another 30 days
-              },
-            });
-            
-            console.log(`Extended subscription for user ${user.id}`);
+            try {
+              // Create renewal transaction
+              const renewalTransaction = await createTransaction({
+                userId: user.id,
+                type: TransactionType.RENEWAL,
+                amount: invoice.amount_paid,
+                currency: invoice.currency.toUpperCase(),
+                description: `Subscription renewal - ${user.plan}`,
+                plan: user.plan,
+                planDuration: getPlanDuration(user.plan),
+                paymentMethod: PaymentMethod.STRIPE_CARD,
+                stripeTransactionId: invoice.id,
+                stripeInvoiceId: invoice.id,
+              });
+
+              // Mark transaction as completed
+              await updateTransactionStatus(renewalTransaction.id, TransactionStatus.COMPLETED, {
+                stripeCustomerId: customerId,
+                stripeSubscriptionId: subscriptionId,
+                stripeInvoiceId: invoice.id,
+                renewedAt: new Date(),
+              });
+
+              // Extend subscription period
+              await prisma.user.update({
+                where: { id: user.id },
+                data: {
+                  planUpdated: new Date(),
+                  planExpires: addDays(new Date(), 30), // Extend for another 30 days
+                },
+              });
+              
+              console.log(`Extended subscription for user ${user.id} - Transaction: ${renewalTransaction.id}`);
+            } catch (error) {
+              console.error(`Failed to process renewal for user ${user.id}:`, error);
+            }
+          } else {
+            console.error(`User not found for Stripe customer ${customerId}`);
           }
         }
         break;
@@ -107,17 +192,43 @@ export async function POST(req: NextRequest) {
         });
         
         if (user) {
-          await prisma.user.update({
-            where: { id: user.id },
-            data: {
+          try {
+            // Create cancellation transaction
+            const cancellationTransaction = await createTransaction({
+              userId: user.id,
+              type: TransactionType.DOWNGRADE,
+              amount: 0,
+              currency: "USD",
+              description: `Subscription cancelled - downgrade to FREE`,
               plan: "FREE",
-              planUpdated: new Date(),
-              planExpires: null,
-              stripeSubscriptionId: null,
-            },
-          });
-          
-          console.log(`Downgraded user ${user.id} to FREE plan due to subscription deletion`);
+              planDuration: getPlanDuration("FREE"),
+              paymentMethod: PaymentMethod.MANUAL,
+              stripeTransactionId: subscription.id,
+            });
+
+            // Mark transaction as completed
+            await updateTransactionStatus(cancellationTransaction.id, TransactionStatus.COMPLETED, {
+              stripeCustomerId: customerId,
+              stripeSubscriptionId: subscription.id,
+              cancelledAt: new Date(),
+            });
+
+            await prisma.user.update({
+              where: { id: user.id },
+              data: {
+                plan: "FREE",
+                planUpdated: new Date(),
+                planExpires: null,
+                stripeSubscriptionId: null,
+              },
+            });
+            
+            console.log(`Downgraded user ${user.id} to FREE plan - Transaction: ${cancellationTransaction.id}`);
+          } catch (error) {
+            console.error(`Failed to process cancellation for user ${user.id}:`, error);
+          }
+        } else {
+          console.error(`User not found for Stripe customer ${customerId}`);
         }
         break;
       }
@@ -137,8 +248,62 @@ export async function POST(req: NextRequest) {
           });
           
           if (user) {
-            console.log(`Payment failed for user ${user.id} - subscription ${subscriptionId}`);
-            // You could add code here to notify the user about the payment failure
+            try {
+              // Create failed payment transaction
+              const failedTransaction = await createTransaction({
+                userId: user.id,
+                type: TransactionType.RENEWAL,
+                amount: invoice.amount_due,
+                currency: invoice.currency.toUpperCase(),
+                description: `Failed payment - ${user.plan} subscription`,
+                plan: user.plan,
+                planDuration: getPlanDuration(user.plan),
+                paymentMethod: PaymentMethod.STRIPE_CARD,
+                stripeTransactionId: invoice.id,
+                stripeInvoiceId: invoice.id,
+              });
+
+              // Mark transaction as failed
+              await updateTransactionStatus(failedTransaction.id, TransactionStatus.FAILED, {
+                stripeCustomerId: customerId,
+                stripeSubscriptionId: subscriptionId,
+                stripeInvoiceId: invoice.id,
+                failureReason: "Payment failed",
+                failedAt: new Date(),
+              });
+              
+              console.log(`Payment failed for user ${user.id} - Transaction: ${failedTransaction.id}`);
+            } catch (error) {
+              console.error(`Failed to process payment failure for user ${user.id}:`, error);
+            }
+          }
+        }
+        break;
+      }
+
+      // Handle successful refunds
+      case "charge.dispute.created": {
+        const dispute = event.data.object as Stripe.Dispute;
+        const chargeId = dispute.charge as string;
+        
+        // Find transaction by charge ID and create dispute record
+        const transaction = await prisma.transaction.findFirst({
+          where: { stripeTransactionId: chargeId },
+        });
+        
+        if (transaction) {
+          try {
+            await updateTransactionStatus(transaction.id, TransactionStatus.DISPUTED, {
+              disputeId: dispute.id,
+              disputeReason: dispute.reason,
+              disputeStatus: dispute.status,
+              disputeAmount: dispute.amount,
+              disputedAt: new Date(),
+            });
+            
+            console.log(`Dispute created for transaction ${transaction.id}`);
+          } catch (error) {
+            console.error(`Failed to process dispute for transaction ${transaction.id}:`, error);
           }
         }
         break;

@@ -1,12 +1,12 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { TaskDetails } from "@/components/tasks/TaskDetails";
+import { TaskDetails } from "../_components/TaskDetails";
 
 export default function TaskDetailsPage() {
   const params = useParams();
-  const taskId = params.taskId as string;
-  const userId = params.userId as string;
+  const taskId = params?.taskId as string;
+  const userId = params?.userId as string;
   
   return (
     <div className="container py-6">

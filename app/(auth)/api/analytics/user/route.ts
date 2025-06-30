@@ -1,10 +1,7 @@
-// /app/(auth)/api/analytics/user/route.ts
-
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function GET(req: Request) {
   try {
     const session = await auth();
@@ -15,14 +12,32 @@ export async function GET(req: Request) {
     
     const userId = session.user.id;
     
-    // Get cards assigned to user
+    // Get date range from query parameters if present
+    const url = new URL(req.url);
+    const startDateParam = url.searchParams.get('startDate');
+    const endDateParam = url.searchParams.get('endDate');
+    
+    const startDate = startDateParam ? new Date(startDateParam) : undefined;
+    const endDate = endDateParam ? new Date(endDateParam) : undefined;
+    
+    // Get cards assigned to user with date range filter if specified
     const assignedCards = await prisma.card.findMany({
       where: {
         assignees: {
           some: {
             id: userId
           }
-        }
+        },
+        ...(startDate && {
+          createdAt: {
+            gte: startDate
+          }
+        }),
+        ...(endDate && {
+          createdAt: {
+            lte: endDate
+          }
+        })
       },
       include: {
         list: {
@@ -61,8 +76,8 @@ export async function GET(req: Request) {
     endOfWeek.setDate(today.getDate() + (7 - today.getDay()));
     
     const cardsDueSoon = assignedCards.filter(card => 
-      card.dueDate && 
-      new Date(card.dueDate) <= endOfWeek && 
+      card.dueDate &&
+      new Date(card.dueDate) <= endOfWeek &&
       !card.completed
     ).length;
     

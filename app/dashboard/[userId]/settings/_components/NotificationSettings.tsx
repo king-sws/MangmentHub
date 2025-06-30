@@ -107,12 +107,6 @@ export function NotificationSettings({ userId }: { userId: string }) {
   
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-semibold tracking-tight">Notification Settings</h2>
-        <p className="text-muted-foreground">
-          Manage how and when you receive notifications.
-        </p>
-      </div>
       
       <Card>
         <CardHeader>

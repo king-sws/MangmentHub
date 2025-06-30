@@ -146,7 +146,7 @@ export default async function WorkspacePage({ params }: WorkspacePageProps) {
             </div>
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center flex-wrap lg:flex-nowrap gap-2">
             {isOwner && (
               <>
                 <Button variant="outline" size="sm" asChild>

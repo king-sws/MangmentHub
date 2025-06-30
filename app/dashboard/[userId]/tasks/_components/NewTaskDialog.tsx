@@ -58,7 +58,7 @@ type TaskFormValues = z.infer<typeof taskSchema>;
 interface NewTaskDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onTaskCreated?: () => void; // New callback prop for task creation
+  onTaskCreated?: () => void;
 }
 
 export function NewTaskDialog({ open, onOpenChange, onTaskCreated }: NewTaskDialogProps) {
@@ -123,6 +123,9 @@ export function NewTaskDialog({ open, onOpenChange, onTaskCreated }: NewTaskDial
       setIsSubmitting(false);
     }
   };
+  
+  // Debug logging - remove this once fixed
+  console.log("Boards data:", boards, "Type:", typeof boards, "Is array:", Array.isArray(boards));
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -193,11 +196,18 @@ export function NewTaskDialog({ open, onOpenChange, onTaskCreated }: NewTaskDial
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {boards?.map((board) => (
-                        <SelectItem key={board.id} value={board.id}>
-                          {board.title}
+                      {/* Safe array check and fallback */}
+                      {Array.isArray(boards) && boards.length > 0 ? (
+                        boards.map((board) => (
+                          <SelectItem key={board.id} value={board.id}>
+                            {board.title}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="No boards" disabled>
+                          {isBoardsLoading ? "Loading boards..." : "No boards available"}
                         </SelectItem>
-                      ))}
+                      )}
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -223,11 +233,18 @@ export function NewTaskDialog({ open, onOpenChange, onTaskCreated }: NewTaskDial
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {lists?.map((list) => (
-                        <SelectItem key={list.id} value={list.id}>
-                          {list.title}
+                      {/* Safe array check for lists too */}
+                      {Array.isArray(lists) && lists.length > 0 ? (
+                        lists.map((list) => (
+                          <SelectItem key={list.id} value={list.id}>
+                            {list.title}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="No boards" disabled>
+                          {isListsLoading ? "Loading lists..." : "No lists available"}
                         </SelectItem>
-                      ))}
+                      )}
                     </SelectContent>
                   </Select>
                   <FormMessage />

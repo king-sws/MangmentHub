@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check, Trash2, RefreshCw } from 'lucide-react';
+import { Check, Trash2, RefreshCw, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -78,9 +78,35 @@ export default function NotificationsPage() {
         return '👥';
       case 'WORKSPACE_ROLE_CHANGE':
         return '🔄';
+      case 'CHAT_MESSAGE':
+        return <MessageSquare className="h-5 w-5" />;
       default:
         return '🔔';
     }
+  };
+
+  // Helper function to determine if notification is a mention
+  const isMentionNotification = (notification: any) => {
+    return notification.type === 'CHAT_MESSAGE' && notification.title === 'You were mentioned';
+  };
+
+  // Helper function to extract message preview from notification
+  const getMessagePreview = (notification: any) => {
+    if (notification.type !== 'CHAT_MESSAGE') return notification.message;
+    
+    // For chat messages, we may want to highlight the preview differently
+    const colonIndex = notification.message.indexOf(':');
+    if (colonIndex > -1) {
+      const prefix = notification.message.substring(0, colonIndex + 1);
+      const messageContent = notification.message.substring(colonIndex + 1);
+      return (
+        <>
+          <span className="font-medium">{prefix}</span>
+          <span>{messageContent}</span>
+        </>
+      );
+    }
+    return notification.message;
   };
 
   return (
@@ -151,13 +177,16 @@ export default function NotificationsPage() {
           {notifications.map((notification: any) => (
             <Card 
               key={notification.id} 
-              className={`mb-4 ${!notification.isRead ? 'border-blue-200 bg-blue-50' : ''}`}
+              className={`mb-4 ${!notification.isRead ? 'border-blue-200 bg-blue-50' : ''} 
+                ${isMentionNotification(notification) ? 'border-yellow-200 bg-yellow-50' : ''}`}
             >
               <CardHeader className="p-4 pb-2">
                 <div className="flex justify-between items-start">
                   <div className="flex items-center gap-2">
                     <span className="text-xl" aria-hidden="true">
-                      {getNotificationTypeIcon(notification.type)}
+                      {typeof getNotificationTypeIcon(notification.type) === 'string' ? 
+                        getNotificationTypeIcon(notification.type) : 
+                        getNotificationTypeIcon(notification.type)}
                     </span>
                     <CardTitle className="text-base font-medium">
                       {notification.title}
@@ -191,7 +220,7 @@ export default function NotificationsPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-4 pt-0">
-                <p className="text-sm">{notification.message}</p>
+                <p className="text-sm">{getMessagePreview(notification)}</p>
               </CardContent>
               {notification.linkTo && (
                 <CardFooter className="p-4 pt-0">
@@ -200,7 +229,7 @@ export default function NotificationsPage() {
                     className="p-0 h-auto text-sm"
                     onClick={() => handleNotificationClick(notification)}
                   >
-                    Go to details
+                    {notification.type === 'CHAT_MESSAGE' ? 'View message' : 'Go to details'}
                   </Button>
                 </CardFooter>
               )}

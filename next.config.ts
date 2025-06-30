@@ -1,26 +1,19 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
   images: {
-    domains: ['lh3.googleusercontent.com', "ui-avatars.com" ], // Add Google's image server
+    domains: ['lh3.googleusercontent.com', "ui-avatars.com", "images.remotePatterns"],
   },
   typescript: {
     ignoreBuildErrors: true,
   },
-      eslint: {
-        ignoreDuringBuilds: true,
-      },
-    experimental: {
-    // Add supported experimental options here if needed
+  eslint: {
+    ignoreDuringBuilds: true,
   },
-  
-  // You can also try this method
+  experimental: {
+    // You can add supported experimental options here
+  },
   output: 'standalone',
-  
-  // This option tells Next.js not to prerender specific paths
-  unstable_excludeFiles: ['**/settings/subscription/**'],
-    
 };
 
 export default nextConfig;

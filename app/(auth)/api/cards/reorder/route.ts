@@ -1,6 +1,12 @@
+// api/cards/reorder/route.ts - Enhanced Card Reorder with Permission System
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { 
+  canMoveCardsBetweenLists,
+  canReorderCards,
+  getUserWorkspaceRole 
+} from "@/lib/permission";
 
 export async function POST(req: Request) {
   try {
@@ -10,6 +16,7 @@ export async function POST(req: Request) {
     }
 
     const { cardId, newListId, newOrder } = await req.json();
+    const userId = session.user.id;
 
     if (!cardId || !newListId || typeof newOrder !== 'number') {
       return new NextResponse("Missing required fields", { status: 400 });
@@ -23,7 +30,11 @@ export async function POST(req: Request) {
           include: {
             board: {
               include: {
-                workspace: true
+                workspace: {
+                  include: {
+                    members: true
+                  }
+                }
               }
             }
           }
@@ -35,16 +46,42 @@ export async function POST(req: Request) {
       return new NextResponse("Card not found", { status: 404 });
     }
 
-    // Check ownership
-    if (card.list.board.workspace.userId !== session.user.id) {
-      return new NextResponse("Unauthorized", { status: 403 });
+    const workspaceId = card.list.board.workspaceId;
+    const oldListId = card.listId;
+    const isMovingBetweenLists = oldListId !== newListId;
+
+    // Enhanced permission checks
+    if (isMovingBetweenLists) {
+      // Check if user can move cards between lists
+      const canMove = await canMoveCardsBetweenLists(userId, workspaceId);
+      if (!canMove) {
+        const userRole = await getUserWorkspaceRole(userId, workspaceId);
+        return new NextResponse(
+          `Cannot move cards between lists. Your role: ${userRole || 'Not a member'}`,
+          { status: 403 }
+        );
+      }
+    } else {
+      // Check if user can reorder cards within the same list
+      const canReorder = await canReorderCards(userId, workspaceId);
+      if (!canReorder) {
+        const userRole = await getUserWorkspaceRole(userId, workspaceId);
+        return new NextResponse(
+          `Cannot reorder cards. Your role: ${userRole || 'Not a member'}`,
+          { status: 403 }
+        );
+      }
     }
 
     // Check if target list exists and is part of the same board
     const targetList = await prisma.list.findUnique({
       where: { id: newListId },
       include: {
-        board: true
+        board: {
+          include: {
+            workspace: true
+          }
+        }
       }
     });
 
@@ -52,25 +89,28 @@ export async function POST(req: Request) {
       return new NextResponse("Invalid target list", { status: 400 });
     }
 
-    const oldListId = card.listId;
+    // Verify target list is in the same workspace
+    if (targetList.board.workspaceId !== workspaceId) {
+      return new NextResponse("Target list is not in the same workspace", { status: 400 });
+    }
 
     // Use a transaction to handle reordering
-    await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       // If moving to a different list
-      if (oldListId !== newListId) {
-        // Step 1: Remove card from old list and update order of remaining cards
+      if (isMovingBetweenLists) {
+        // Step 1: Move card to new list with new order
         await tx.card.update({
           where: { id: cardId },
           data: { listId: newListId, order: newOrder }
         });
 
-        // Step 2: Get all cards from the old list and reorder them
+        // Step 2: Reorder cards in the old list
         const oldListCards = await tx.card.findMany({
           where: { listId: oldListId },
           orderBy: { order: 'asc' }
         });
 
-        // Update order of cards in the old list
+        // Update order of remaining cards in the old list
         for (let i = 0; i < oldListCards.length; i++) {
           await tx.card.update({
             where: { id: oldListCards[i].id },
@@ -78,7 +118,7 @@ export async function POST(req: Request) {
           });
         }
 
-        // Step 3: Make space in the new list for the card and update order of cards
+        // Step 3: Reorder cards in the new list
         const newListCards = await tx.card.findMany({
           where: { 
             listId: newListId,
@@ -88,30 +128,27 @@ export async function POST(req: Request) {
         });
 
         // Update order of cards in the new list
-        for (let i = 0, j = 0; i <= newListCards.length; i++) {
-          if (i === newOrder) {
-            continue; // Skip the position where the moved card will be
+        let currentOrder = 0;
+        for (const listCard of newListCards) {
+          if (currentOrder === newOrder) {
+            currentOrder++; // Skip the position where the moved card is
           }
           
-          if (j < newListCards.length) {
-            await tx.card.update({
-              where: { id: newListCards[j].id },
-              data: { order: i }
-            });
-            j++;
-          }
+          await tx.card.update({
+            where: { id: listCard.id },
+            data: { order: currentOrder }
+          });
+          
+          currentOrder++;
         }
       } 
       // If just reordering within the same list
       else {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const oldOrder = card.order;
-        
-        // Get all cards in the list
+        // Get all cards in the list except the one being moved
         const listCards = await tx.card.findMany({
           where: { 
             listId: newListId,
-            id: { not: cardId } // Exclude the card being moved
+            id: { not: cardId }
           },
           orderBy: { order: 'asc' }
         });
@@ -123,23 +160,51 @@ export async function POST(req: Request) {
         });
         
         // Reorder the other cards
-        let index = 0;
-        for (const c of listCards) {
-          if (index === newOrder) {
-            index++; // Skip the position where the moved card will be
+        let currentOrder = 0;
+        for (const listCard of listCards) {
+          if (currentOrder === newOrder) {
+            currentOrder++; // Skip the position where the moved card is
           }
           
           await tx.card.update({
-            where: { id: c.id },
-            data: { order: index }
+            where: { id: listCard.id },
+            data: { order: currentOrder }
           });
           
-          index++;
+          currentOrder++;
         }
       }
+
+      // Return the updated card with full details
+      return await tx.card.findUnique({
+        where: { id: cardId },
+        include: {
+          assignees: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              image: true
+            }
+          },
+          list: {
+            select: {
+              id: true,
+              title: true,
+              boardId: true
+            }
+          }
+        }
+      });
     });
 
-    return NextResponse.json({ success: true });
+    console.log(`[CARD_REORDER] Card ${cardId} ${isMovingBetweenLists ? 'moved' : 'reordered'} by user ${userId} (role: ${await getUserWorkspaceRole(userId, workspaceId)})`);
+
+    return NextResponse.json({
+      success: true,
+      card: result,
+      action: isMovingBetweenLists ? 'moved' : 'reordered'
+    });
   } catch (error) {
     console.error("[CARD_REORDER]", error);
     return new NextResponse("Internal error", { status: 500 });

@@ -12,6 +12,7 @@ export const NotificationType = {
   INVITATION_DECLINED: "INVITATION_DECLINED",
   WORKSPACE_JOIN: "WORKSPACE_JOIN",
   WORKSPACE_ROLE_CHANGE: "WORKSPACE_ROLE_CHANGE",
+  CHAT_MESSAGE: "CHAT_MESSAGE", // Added new notification type
 };
 
 // Generic notification creation function
@@ -88,6 +89,69 @@ export async function notifyTaskAssigned({
   }
   
   return assigneeNotification;
+}
+
+// Chat message notification
+export async function notifyChatMessage({
+  messageId,
+  messageContent,
+  senderId,
+  senderName,
+  workspaceId,
+  chatRoomId,
+  chatRoomName,
+  recipientIds,
+  isPrivate = false,
+  isMention = false,
+}: {
+  messageId: string;
+  messageContent: string;
+  senderId: string;
+  senderName: string;
+  workspaceId: string;
+  chatRoomId: string;
+  chatRoomName: string;
+  recipientIds: string[];
+  isPrivate?: boolean;
+  isMention?: boolean;
+}) {
+  const notifications = [];
+  
+  // Truncate message content for notification to prevent very long notifications
+  const MAX_PREVIEW_LENGTH = 50;
+  const truncatedContent = messageContent.length > MAX_PREVIEW_LENGTH 
+    ? `${messageContent.substring(0, MAX_PREVIEW_LENGTH)}...` 
+    : messageContent;
+  
+  for (const recipientId of recipientIds) {
+    // Don't notify the sender about their own message
+    if (recipientId !== senderId) {
+      const title = isMention 
+        ? "You were mentioned" 
+        : isPrivate 
+          ? "New private message" 
+          : "New message";
+      
+      const message = isMention
+        ? `${senderName} mentioned you in ${chatRoomName}: ${truncatedContent}`
+        : `${senderName} in ${chatRoomName}: ${truncatedContent}`;
+      
+      const notification = await createNotification({
+        userId: recipientId,
+        title,
+        message,
+        type: NotificationType.CHAT_MESSAGE,
+        linkTo: `/dashboard/workspaces/${workspaceId}/chat/${chatRoomId}?messageId=${messageId}`,
+        relatedId: messageId,
+      });
+      
+      if (notification) {
+        notifications.push(notification);
+      }
+    }
+  }
+  
+  return notifications;
 }
 
 // Task due soon notification

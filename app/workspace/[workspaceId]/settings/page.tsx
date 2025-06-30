@@ -4,19 +4,21 @@ import { auth } from "@/auth";
 import { notFound, redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { 
-  ChevronLeft, 
   Settings, 
   Briefcase, 
   AlertTriangle, 
   Shield,
   Upload,
   Users,
-  Bell
+  Bell,
+  Copy
+  
 } from "lucide-react";
 import Link from "next/link";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import { RenameWorkspaceForm } from "../_components/RenameWorkspaceForm";
 import { DeleteWorkspaceButton } from "../_components/DeleteWorkspaceButton";
 import { WorkspaceAvatar } from "@/components/WorkspaceAvatar";
@@ -79,70 +81,85 @@ export default async function WorkspaceSettingsPage({ params }: WorkspaceSetting
   });
 
   return (
-    <div className="p-6">
-      <div className="max-w-4xl mx-auto">
-        {/* Breadcrumb and Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center">
-            <Button variant="ghost" size="sm" asChild className="mr-2">
-              <Link href={`/workspace/${params.workspaceId}`}>
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                Back
-              </Link>
-            </Button>
-            <Separator orientation="vertical" className="h-6 mx-2" />
-            <div className="flex items-center">
-              <WorkspaceAvatar name={workspace.name} className="h-8 w-8 mr-3" />
-              <div>
-                <h1 className="text-2xl font-bold flex items-center">
-                  {workspace.name}
-                  <Separator orientation="vertical" className="h-5 mx-3" />
-                  <span className="text-lg font-medium text-muted-foreground">Settings</span>
-                </h1>
-                <p className="text-sm text-muted-foreground">
-                  Created {createdAt} • {workspace._count.members} member{workspace._count.members !== 1 ? 's' : ''} • {workspace._count.boards} board{workspace._count.boards !== 1 ? 's' : ''}
-                </p>
+    <div className="min-h-screen bg-background">
+      <div className="max-w-6xl mx-auto px-6 py-8">
+        {/* Professional Header */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-start space-x-4">
+              <WorkspaceAvatar name={workspace.name} className="h-12 w-12 flex-shrink-0" />
+              <div className="space-y-1">
+                <div className="flex items-center space-x-3">
+                  <h1 className="text-3xl font-bold tracking-tight">{workspace.name}</h1>
+                  <Badge variant="secondary" className="text-xs font-medium">
+                    Workspace Settings
+                  </Badge>
+                </div>
+                <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                  <span>Created {createdAt}</span>
+                  <Separator orientation="vertical" className="h-4" />
+                  <span>{workspace._count.members} member{workspace._count.members !== 1 ? 's' : ''}</span>
+                  <Separator orientation="vertical" className="h-4" />
+                  <span>{workspace._count.boards} board{workspace._count.boards !== 1 ? 's' : ''}</span>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Settings Tabs */}
-        <Tabs defaultValue="general" className="space-y-6">
-          <div className="bg-background sticky top-0 z-10 pb-4">
-            <TabsList className="grid grid-cols-4 w-full max-w-2xl">
-              <TabsTrigger value="general" className="flex items-center">
+        {/* Professional Settings Interface */}
+        <Tabs defaultValue="general" className="space-y-8">
+          <div className="border-b border-border">
+            <TabsList className="h-12 p-1 bg-transparent">
+              <TabsTrigger 
+                value="general" 
+                className="h-10 px-6 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+              >
                 <Settings className="h-4 w-4 mr-2" />
                 General
               </TabsTrigger>
-              <TabsTrigger value="members" className="flex items-center">
+              <TabsTrigger 
+                value="members" 
+                className="h-10 px-6 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+              >
                 <Users className="h-4 w-4 mr-2" />
                 Members
               </TabsTrigger>
-              <TabsTrigger value="notifications" className="flex items-center">
+              <TabsTrigger 
+                value="notifications" 
+                className="h-10 px-6 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+              >
                 <Bell className="h-4 w-4 mr-2" />
                 Notifications
               </TabsTrigger>
-              <TabsTrigger value="danger" className="flex items-center text-destructive">
+              <TabsTrigger 
+                value="danger" 
+                className="h-10 px-6 data-[state=active]:bg-background data-[state=active]:shadow-sm text-destructive data-[state=active]:text-destructive"
+              >
                 <AlertTriangle className="h-4 w-4 mr-2" />
-                Danger Zone
+                Advanced
               </TabsTrigger>
             </TabsList>
           </div>
 
           {/* General Settings Tab */}
-          <TabsContent value="general" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Briefcase className="h-5 w-5 mr-2 text-primary" />
-                  Workspace Information
-                </CardTitle>
-                <CardDescription>
-                  Update your workspace details and preferences
-                </CardDescription>
+          <TabsContent value="general" className="space-y-8 mt-8">
+            {/* Workspace Information Card */}
+            <Card className="border-0 shadow-sm">
+              <CardHeader className="pb-4">
+                <div className="flex items-center space-x-2">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <Briefcase className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl">Workspace Information</CardTitle>
+                    <CardDescription className="text-sm">
+                      Manage your workspace identity and basic settings
+                    </CardDescription>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent className="space-y-6">
+              <CardContent className="space-y-8">
                 <RenameWorkspaceForm
                   workspaceId={params.workspaceId}
                   initialName={workspace.name}
@@ -150,49 +167,67 @@ export default async function WorkspaceSettingsPage({ params }: WorkspaceSetting
 
                 <Separator />
 
-                <div>
-                  <h3 className="text-md font-medium mb-2">Workspace Avatar</h3>
-                  <div className="flex items-center">
-                    <WorkspaceAvatar name={workspace.name} className="h-16 w-16 mr-4" />
-                    <Button variant="outline" size="sm" className="flex items-center">
-                      <Upload className="h-4 w-4 mr-2" />
-                      Upload Image
-                    </Button>
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-base font-semibold mb-1">Workspace Avatar</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Upload a custom image to represent your workspace
+                    </p>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Recommended: Square image, at least 256x256px
-                  </p>
+                  <div className="flex items-center space-x-6">
+                    <WorkspaceAvatar name={workspace.name} className="h-20 w-20 border-2 border-border" />
+                    <div className="space-y-2">
+                      <Button variant="outline" size="sm" className="h-9">
+                        <Upload className="h-4 w-4 mr-2" />
+                        Upload New Image
+                      </Button>
+                      <p className="text-xs text-muted-foreground">
+                        PNG, JPG up to 2MB. Recommended size: 256×256px
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Shield className="h-5 w-5 mr-2 text-primary" />
-                  Workspace Visibility & Security
-                </CardTitle>
-                <CardDescription>
-                  Manage who can access this workspace
-                </CardDescription>
+            {/* Workspace Details Card */}
+            <Card className="border-0 shadow-sm">
+              <CardHeader className="pb-4">
+                <div className="flex items-center space-x-2">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <Shield className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl">Workspace Details</CardTitle>
+                    <CardDescription className="text-sm">
+                      View workspace metadata and system information
+                    </CardDescription>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <h3 className="text-sm font-medium">Workspace ID</h3>
-                      <div className="flex items-center bg-muted p-2 rounded-md">
-                        <code className="text-xs text-muted-foreground flex-1 break-all">
-                          {params.workspaceId}
-                        </code>
-                        <Button variant="ghost" size="sm">
-                          Copy
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Workspace ID</label>
+                      <div className="mt-1 flex items-center space-x-2">
+                        <div className="flex-1 p-3 bg-muted/50 rounded-lg border">
+                          <code className="text-sm font-mono break-all">
+                            {params.workspaceId}
+                          </code>
+                        </div>
+                        <Button variant="outline" size="sm" className="px-3">
+                          <Copy className="h-4 w-4" />
                         </Button>
                       </div>
                     </div>
-                    <div className="space-y-2">
-                      <h3 className="text-sm font-medium">Created</h3>
-                      <p className="text-sm text-muted-foreground">{createdAt}</p>
+                  </div>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Creation Date</label>
+                      <div className="mt-1 p-3 bg-muted/50 rounded-lg border">
+                        <span className="text-sm">{createdAt}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -200,24 +235,36 @@ export default async function WorkspaceSettingsPage({ params }: WorkspaceSetting
             </Card>
           </TabsContent>
 
-          {/* Members Tab (Placeholder) */}
-          <TabsContent value="members">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Users className="h-5 w-5 mr-2 text-primary" />
-                  Workspace Members
-                </CardTitle>
-                <CardDescription>
-                  Manage members and permissions in this workspace
-                </CardDescription>
+          {/* Members Tab */}
+          <TabsContent value="members" className="mt-8">
+            <Card className="border-0 shadow-sm">
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <div className="p-2 rounded-lg bg-primary/10">
+                      <Users className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-xl">Team Members</CardTitle>
+                      <CardDescription className="text-sm">
+                        Manage workspace members, roles, and permissions
+                      </CardDescription>
+                    </div>
+                  </div>
+                  <Badge variant="secondary" className="text-sm">
+                    {workspace._count.members} member{workspace._count.members !== 1 ? 's' : ''}
+                  </Badge>
+                </div>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <p className="text-sm text-muted-foreground">
-                    Current members: <span className="font-medium">{workspace._count.members}</span>
-                  </p>
-                  <Button size="sm" asChild>
+              <CardContent>
+                <div className="flex items-center justify-between p-6 bg-muted/30 rounded-lg border border-dashed">
+                  <div className="space-y-1">
+                    <p className="font-medium">Member Management</p>
+                    <p className="text-sm text-muted-foreground">
+                      Add, remove, and manage member permissions
+                    </p>
+                  </div>
+                  <Button asChild>
                     <Link href={`/workspace/${params.workspaceId}/members`}>
                       Manage Members
                     </Link>
@@ -227,51 +274,71 @@ export default async function WorkspaceSettingsPage({ params }: WorkspaceSetting
             </Card>
           </TabsContent>
 
-          {/* Notifications Tab (Placeholder) */}
-          <TabsContent value="notifications">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Bell className="h-5 w-5 mr-2 text-primary" />
-                  Notification Settings
-                </CardTitle>
-                <CardDescription>
-                  Configure how and when you receive notifications
-                </CardDescription>
+          {/* Notifications Tab */}
+          <TabsContent value="notifications" className="mt-8">
+            <Card className="border-0 shadow-sm">
+              <CardHeader className="pb-4">
+                <div className="flex items-center space-x-2">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <Bell className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl">Notification Preferences</CardTitle>
+                    <CardDescription className="text-sm">
+                      Configure how and when you receive workspace notifications
+                    </CardDescription>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  Notification settings will be available in a future update.
-                </p>
+                <div className="flex items-center justify-center p-12 bg-muted/30 rounded-lg border border-dashed">
+                  <div className="text-center space-y-3">
+                    <div className="p-3 rounded-full bg-muted inline-flex">
+                      <Bell className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="font-medium">Coming Soon</p>
+                      <p className="text-sm text-muted-foreground max-w-sm">
+                        Notification settings and preferences will be available in an upcoming update
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Danger Zone Tab */}
-          <TabsContent value="danger">
-            <Card className="border-destructive/20">
-              <CardHeader className="text-destructive">
-                <CardTitle className="flex items-center">
-                  <AlertTriangle className="h-5 w-5 mr-2" />
-                  Danger Zone
-                </CardTitle>
-                <CardDescription className="text-destructive/80">
-                  Destructive actions that cannot be undone
-                </CardDescription>
+          {/* Advanced/Danger Zone Tab */}
+          <TabsContent value="danger" className="mt-8">
+            <Card className="border-destructive/20 shadow-sm">
+              <CardHeader className="pb-4">
+                <div className="flex items-center space-x-2">
+                  <div className="p-2 rounded-lg bg-destructive/10">
+                    <AlertTriangle className="h-5 w-5 text-destructive" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl text-destructive">Advanced Settings</CardTitle>
+                    <CardDescription className="text-destructive/80">
+                      Irreversible actions that require careful consideration
+                    </CardDescription>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-6">
-                  <div className="p-4 border border-destructive/20 rounded-md bg-destructive/5">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h3 className="font-medium text-destructive mb-1">Delete Workspace</h3>
-                        <p className="text-sm text-muted-foreground mb-3">
-                          Permanently delete this workspace and all its data. This action cannot be undone.
-                          All boards, members, and associated data will be permanently removed.
+                <div className="p-6 border border-destructive/20 rounded-lg bg-destructive/5">
+                  <div className="flex items-start justify-between space-x-4">
+                    <div className="space-y-2">
+                      <h3 className="font-semibold text-destructive">Delete Workspace</h3>
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">
+                          Permanently delete this workspace and all associated data.
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          This will remove all boards, members, chat history, and files. This action cannot be undone.
                         </p>
                       </div>
-                      <DeleteWorkspaceButton workspaceId={params.workspaceId} />
                     </div>
+                    <DeleteWorkspaceButton workspaceId={params.workspaceId} />
                   </div>
                 </div>
               </CardContent>

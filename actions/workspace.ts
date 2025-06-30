@@ -1,12 +1,24 @@
+// Updated workspace actions with member limits
 "use server";
 
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
-import { PlanType, getEffectivePlan, getWorkspaceLimit } from "@/lib/plans";
+import { PlanType, getEffectivePlan, getWorkspaceLimit, getMemberLimit } from "@/lib/plans";
 
 interface CreateWorkspaceInput {
   name: string;
+}
+
+interface WorkspaceWithLimits {
+  id: string;
+  name: string;
+  userId: string;
+  createdAt: Date;
+  updatedAt: Date | null;
+  memberCount?: number;
+  memberLimit?: number;
+  canAddMembers?: boolean;
 }
 
 export async function getWorkspaces() {
@@ -16,9 +28,33 @@ export async function getWorkspaces() {
     throw new Error("Unauthorized");
   }
   
+  // Get user's subscription details
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: {
+      plan: true,
+      planExpires: true,
+    },
+  });
+
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  // Get effective plan
+  const effectivePlan = getEffectivePlan(user.plan as PlanType, user.planExpires);
+  const memberLimit = getMemberLimit(effectivePlan);
+  
   // Get workspaces where user is owner
   const ownedWorkspaces = await prisma.workspace.findMany({
-    where: { userId: session.user.id }
+    where: { userId: session.user.id },
+    include: {
+      _count: {
+        select: {
+          members: true
+        }
+      }
+    }
   });
   
   // Get workspaces where user is a member (but not owner)
@@ -30,15 +66,36 @@ export async function getWorkspaces() {
       }
     },
     include: {
-      workspace: true,
+      workspace: {
+        include: {
+          _count: {
+            select: {
+              members: true
+            }
+          }
+        }
+      },
     },
     orderBy: { createdAt: 'desc' }
   });
   
-  // Combine both types of workspaces
+  // Add subscription info to owned workspaces
+  const ownedWithLimits: WorkspaceWithLimits[] = ownedWorkspaces.map(workspace => ({
+    ...workspace,
+    memberCount: workspace._count.members,
+    memberLimit,
+    canAddMembers: workspace._count.members < memberLimit
+  }));
+
+  // Add basic info to member workspaces (they don't control the subscription)
+  const memberWithLimits: WorkspaceWithLimits[] = memberWorkspaces.map(m => ({
+    ...m.workspace,
+    memberCount: m.workspace._count.members,
+  }));
+  
   return [
-    ...ownedWorkspaces,
-    ...memberWorkspaces.map(m => m.workspace)
+    ...ownedWithLimits,
+    ...memberWithLimits
   ];
 }
 
@@ -90,6 +147,67 @@ export async function createWorkspace({ name }: CreateWorkspaceInput) {
   revalidatePath('/workspace/[workspaceId]');
 
   return workspace;
+}
+
+export async function getWorkspaceWithSubscriptionInfo(workspaceId: string) {
+  const session = await auth();
+  
+  if (!session?.user?.id) {
+    throw new Error("Unauthorized");
+  }
+
+  // Get workspace with owner details
+  const workspace = await prisma.workspace.findUnique({
+    where: { id: workspaceId },
+    include: {
+      user: {
+        select: {
+          plan: true,
+          planExpires: true,
+        }
+      },
+      _count: {
+        select: {
+          members: true
+        }
+      }
+    }
+  });
+
+  if (!workspace) {
+    throw new Error("Workspace not found");
+  }
+
+  // Check if user has access to this workspace
+  const member = await prisma.workspaceMember.findFirst({
+    where: {
+      userId: session.user.id,
+      workspaceId,
+    },
+  });
+
+  if (!member) {
+    throw new Error("Access denied");
+  }
+
+  // Get effective plan and limits
+  const effectivePlan = getEffectivePlan(
+    workspace.user.plan as PlanType, 
+    workspace.user.planExpires
+  );
+  const memberLimit = getMemberLimit(effectivePlan);
+
+  return {
+    ...workspace,
+    subscription: {
+      plan: effectivePlan,
+      memberLimit,
+      currentMemberCount: workspace._count.members,
+      canAddMembers: workspace._count.members < memberLimit,
+      remainingSlots: Math.max(0, memberLimit - workspace._count.members),
+      isOwner: workspace.userId === session.user.id
+    }
+  };
 }
 
 export async function renameWorkspace({ id, name }: { id: string; name: string }) {

@@ -1,23 +1,35 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 // lib/subscription-sync.ts
 import { prisma } from "@/lib/prisma";
-import { PlanType, getEffectivePlan } from "@/lib/plans";
 import Stripe from "stripe";
-import { addDays } from "date-fns";
 
-// Initialize Stripe with a valid API version
-// Using a version that's compatible with Stripe library v18.1.0
+// Define PlanType locally if not available from @/lib/plans
+export type PlanType = "FREE" | "PRO" | "BUSINESS";
+
+// Initialize Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2023-10-16", // Changed from "2025-04-30.basil" to supported version
+  apiVersion: "2023-10-16",
 });
+
+// Helper function to add days to a date
+function addDays(date: Date, days: number): Date {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+}
+
+// Helper function to get effective plan
+function getEffectivePlan(plan: PlanType, planExpires?: Date | null): PlanType {
+  if (plan === "FREE") return "FREE";
+  if (!planExpires) return plan;
+  return new Date() > planExpires ? "FREE" : plan;
+}
 
 /**
  * Synchronizes a user's subscription state between the database and Stripe
- * This ensures that manual changes in Prisma Studio are properly reflected
  */
 export async function syncSubscriptionState(userId: string) {
   try {
-    // Get user from database
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -36,17 +48,14 @@ export async function syncSubscriptionState(userId: string) {
     }
 
     const currentPlan = user.plan as PlanType;
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const effectivePlan = getEffectivePlan(currentPlan, user.planExpires);
     
     // Case 1: Plan is FREE in DB - ensure no active subscription in Stripe
     if (currentPlan === "FREE") {
-      // If there's an active Stripe subscription, cancel it
       if (user.stripeSubscriptionId) {
         try {
           await stripe.subscriptions.cancel(user.stripeSubscriptionId);
           
-          // Update user record to clear Stripe subscription ID
           await prisma.user.update({
             where: { id: userId },
             data: {
@@ -57,7 +66,6 @@ export async function syncSubscriptionState(userId: string) {
           
           console.log(`Canceled Stripe subscription for FREE user ${userId}`);
         } catch (err) {
-          // If subscription doesn't exist in Stripe, just clear it from our DB
           await prisma.user.update({
             where: { id: userId },
             data: {
@@ -70,11 +78,8 @@ export async function syncSubscriptionState(userId: string) {
     }
     
     // Case 2: Paid plan in DB
-    
-    // First, make sure we have a Stripe customer
     let customerId = user.stripeCustomerId;
     if (!customerId) {
-      // Create Stripe customer
       const customer = await stripe.customers.create({
         email: user.email || "",
         name: user.name || undefined,
@@ -85,7 +90,6 @@ export async function syncSubscriptionState(userId: string) {
       
       customerId = customer.id;
       
-      // Update user with new customer ID
       await prisma.user.update({
         where: { id: userId },
         data: {
@@ -94,22 +98,19 @@ export async function syncSubscriptionState(userId: string) {
       });
     }
     
-    // Figure out which price to use
+    // Get the correct price ID
     const priceEnvKey = `STRIPE_PRICE_ID_${currentPlan}`;
     const priceId = process.env[priceEnvKey];
     if (!priceId) {
       throw new Error(`No Stripe price ID found for plan: ${currentPlan}`);
     }
     
-    // Check if user already has a subscription in Stripe
+    // Check existing subscription
     if (user.stripeSubscriptionId) {
       try {
-        // Get current subscription from Stripe
         const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
         
-        // If status is active and plan matches, nothing to do
         if (subscription.status === "active") {
-          // Update expiry date to match Stripe
           const currentPeriodEnd = new Date(subscription.current_period_end * 1000);
           await prisma.user.update({
             where: { id: userId },
@@ -121,12 +122,11 @@ export async function syncSubscriptionState(userId: string) {
           return { success: true, message: "Subscription already active and synced" };
         }
       } catch (err) {
-        // Subscription not found in Stripe, need to create new one
         console.log("Stripe subscription not found, will create new one");
       }
     }
     
-    // Create new subscription in Stripe
+    // Create new subscription
     const subscription = await stripe.subscriptions.create({
       customer: customerId,
       items: [{ price: priceId }],
@@ -136,7 +136,6 @@ export async function syncSubscriptionState(userId: string) {
       },
     });
     
-    // Update user with subscription details
     await prisma.user.update({
       where: { id: userId },
       data: {
@@ -161,22 +160,26 @@ export async function syncSubscriptionState(userId: string) {
 
 /**
  * Force updates a user's plan with proper Stripe integration
- * This can be called after manually changing plan in Prisma Studio
  */
-export async function forceUpdatePlan(userId: string, plan: PlanType) {
+export async function forceUpdatePlan(
+  userId: string, 
+  plan: PlanType,
+  options?: {
+    effectiveDate?: Date;
+    prorationBehavior?: "create_prorations" | "none" | "always_invoice";
+    sendNotification?: boolean;
+  }
+) {
   try {
-    // Update the plan in the database first
     await prisma.user.update({
       where: { id: userId },
       data: {
         plan: plan,
         planUpdated: new Date(),
-        // If it's a paid plan, set a temporary expiry date that will be updated by sync
         planExpires: plan !== "FREE" ? addDays(new Date(), 30) : null,
       },
     });
     
-    // Then sync with Stripe to ensure consistency
     return await syncSubscriptionState(userId);
     
   } catch (error) {

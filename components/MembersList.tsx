@@ -543,7 +543,7 @@ export const MembersList = memo(({ workspaceId }: MembersListProps) => {
               {members.map((member) => (
                 <div
                   key={member.id}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors"
+                  className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white dark:bg-black rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors"
                 >
                   <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10">
@@ -649,7 +649,7 @@ export const MembersList = memo(({ workspaceId }: MembersListProps) => {
         
         <TabsContent value="pending" className="mt-6 space-y-4">
           {invitations.length === 0 ? (
-            <Card className="flex flex-col items-center justify-center p-8 text-center bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+            <Card className="flex flex-col items-center justify-center p-8 text-center bg-white dark:bg-black border-gray-200 dark:border-black">
               <div className="rounded-full bg-gray-100 dark:bg-gray-700 p-3 mb-4">
                 <Mail className="h-8 w-8 text-gray-500 dark:text-gray-400" />
               </div>

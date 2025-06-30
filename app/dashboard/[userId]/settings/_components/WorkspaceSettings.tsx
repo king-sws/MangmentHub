@@ -1,4 +1,3 @@
-/* eslint-disable react/no-unescaped-entities */
 "use client";
 
 import { useState, useEffect } from "react";
@@ -10,12 +9,17 @@ import {
   Loader2,
   Save,
   Trash2,
-  AlertCircle
+  AlertCircle,
+  Settings2,
+  Building2,
+  Shield,
+  Info
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,11 +39,22 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
-// Schema for workspace settings
+// Enhanced schema with better validation
 const workspaceFormSchema = z.object({
-  name: z.string().min(1, "Name is required").max(50, "Name cannot exceed 50 characters"),
-  description: z.string().max(500, "Description cannot exceed 500 characters").optional(),
+  name: z.string()
+    .min(2, "Name must be at least 2 characters")
+    .max(50, "Name cannot exceed 50 characters")
+    .regex(/^[a-zA-Z0-9\s\-_]+$/, "Name can only contain letters, numbers, spaces, hyphens and underscores"),
+  description: z.string()
+    .max(500, "Description cannot exceed 500 characters")
+    .optional(),
 });
 
 type WorkspaceFormValues = z.infer<typeof workspaceFormSchema>;
@@ -49,21 +64,31 @@ type WorkspaceData = {
   name: string;
   description?: string;
   isOwner: boolean;
+  createdAt?: string;
+  memberCount?: number;
+  planType?: 'FREE' | 'PRO' | 'ENTERPRISE';
 };
 
-export function WorkspaceSettings({ workspaceId }: { workspaceId: string }) {
+interface WorkspaceSettingsProps {
+  workspaceId: string;
+}
+
+export function WorkspaceSettings({ workspaceId }: WorkspaceSettingsProps) {
   const [workspace, setWorkspace] = useState<WorkspaceData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [confirmationText, setConfirmationText] = useState("");
 
   const {
     register,
     handleSubmit,
     formState: { errors, isDirty },
-    reset
+    reset,
+    watch
   } = useForm<WorkspaceFormValues>({
     resolver: zodResolver(workspaceFormSchema),
     defaultValues: {
@@ -72,6 +97,9 @@ export function WorkspaceSettings({ workspaceId }: { workspaceId: string }) {
     },
   });
 
+  const watchedName = watch("name");
+  const watchedDescription = watch("description");
+
   // Fetch workspace data
   useEffect(() => {
     const fetchWorkspace = async () => {
@@ -79,36 +107,36 @@ export function WorkspaceSettings({ workspaceId }: { workspaceId: string }) {
         setIsLoading(true);
         setError(null);
         
-        // Fetch workspace details
-        const res = await fetch(`/api/workspaces/${workspaceId}`);
+        const [workspaceRes, roleRes] = await Promise.all([
+          fetch(`/api/workspaces/${workspaceId}`),
+          fetch(`/api/workspaces/${workspaceId}/role`)
+        ]);
         
-        if (!res.ok) {
+        if (!workspaceRes.ok) {
           throw new Error("Failed to fetch workspace details");
         }
         
-        const data = await res.json();
-        
-        // Fetch user role separately
-        const roleRes = await fetch(`/api/workspaces/${workspaceId}/role`);
+        const workspaceData = await workspaceRes.json();
         const roleData = await roleRes.json();
         
-        setWorkspace(data.workspace);
+        setWorkspace(workspaceData.workspace);
         setUserRole(roleData.role);
         
-        // Update form with fetched data
         reset({
-          name: data.workspace.name,
-          description: data.workspace.description || "",
+          name: workspaceData.workspace.name,
+          description: workspaceData.workspace.description || "",
         });
       } catch (err) {
         console.error("Error fetching workspace:", err);
-        setError("Failed to load workspace data. Please try again.");
+        setError("Failed to load workspace data. Please refresh and try again.");
       } finally {
         setIsLoading(false);
       }
     };
     
-    fetchWorkspace();
+    if (workspaceId) {
+      fetchWorkspace();
+    }
   }, [workspaceId, reset]);
 
   // Handle form submission
@@ -123,16 +151,24 @@ export function WorkspaceSettings({ workspaceId }: { workspaceId: string }) {
       });
       
       if (!res.ok) {
-        throw new Error("Failed to update workspace");
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Failed to update workspace");
       }
       
       const updatedWorkspace = await res.json();
-      setWorkspace(updatedWorkspace);
+      setWorkspace(updatedWorkspace.workspace);
       
-      toast.success("Workspace settings updated successfully");
+      toast.success("Workspace updated successfully", {
+        description: "Your changes have been saved."
+      });
+      
+      // Reset form dirty state
+      reset(data);
     } catch (err) {
       console.error("Error updating workspace:", err);
-      toast.error("Failed to update workspace settings");
+      toast.error("Failed to update workspace", {
+        description: err instanceof Error ? err.message : "Please try again later."
+      });
     } finally {
       setIsSaving(false);
     }
@@ -140,206 +176,343 @@ export function WorkspaceSettings({ workspaceId }: { workspaceId: string }) {
 
   // Handle workspace deletion
   const handleDeleteWorkspace = async () => {
+    if (confirmationText !== workspace?.name) {
+      toast.error("Confirmation text doesn't match workspace name");
+      return;
+    }
+
     try {
-      setIsSaving(true);
+      setIsDeleting(true);
       
       const res = await fetch(`/api/workspaces/${workspaceId}`, {
         method: "DELETE",
       });
       
       if (!res.ok) {
-        throw new Error("Failed to delete workspace");
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Failed to delete workspace");
       }
       
-      toast.success("Workspace deleted successfully");
-      window.location.href = "/dashboard"; // Redirect to dashboard
+      toast.success("Workspace deleted", {
+        description: "The workspace and all its data have been permanently removed."
+      });
+      
+      // Redirect after a short delay
+      setTimeout(() => {
+        window.location.href = "/dashboard";
+      }, 1000);
     } catch (err) {
       console.error("Error deleting workspace:", err);
-      toast.error("Failed to delete workspace");
+      toast.error("Failed to delete workspace", {
+        description: err instanceof Error ? err.message : "Please try again later."
+      });
       setDeleteDialogOpen(false);
     } finally {
-      setIsSaving(false);
+      setIsDeleting(false);
     }
   };
 
-  // Show loading state
+  const getPlanBadge = (planType?: string) => {
+    switch (planType) {
+      case 'FREE':
+        return <Badge variant="secondary" className="text-xs">Free</Badge>;
+      case 'PRO':
+        return <Badge variant="default" className="text-xs bg-blue-600">Pro</Badge>;
+      case 'ENTERPRISE':
+        return <Badge variant="default" className="text-xs bg-purple-600">Enterprise</Badge>;
+      default:
+        return null;
+    }
+  };
+
+  // Loading state
   if (isLoading) {
     return (
-      <div className="flex justify-center py-4 sm:py-6">
-        <Loader2 className="h-6 w-6 sm:h-8 sm:w-8 animate-spin text-primary" />
+      <div className="space-y-6">
+        <div className="flex items-center justify-center py-12">
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">Loading workspace settings...</p>
+          </div>
+        </div>
       </div>
     );
   }
 
-  // Show error state
+  // Error state
   if (error) {
     return (
-      <div className="bg-red-50 p-3 sm:p-4 rounded-md border border-red-200 dark:bg-red-900/20 dark:border-red-900/50">
-        <div className="flex items-center gap-2">
-          <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 text-red-600 dark:text-red-400" />
-          <p className="text-sm sm:text-base text-red-600 dark:text-red-400">{error}</p>
-        </div>
-        <Button 
-          variant="outline" 
-          className="mt-2 text-xs sm:text-sm"
-          onClick={() => window.location.reload()}
-        >
-          Retry
-        </Button>
-      </div>
+      <Card className="border-destructive/50 bg-destructive/5">
+        <CardContent className="pt-6">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-destructive mt-0.5" />
+            <div className="flex-1">
+              <h3 className="font-medium text-destructive">Unable to load workspace</h3>
+              <p className="text-sm text-muted-foreground mt-1">{error}</p>
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="mt-3"
+                onClick={() => window.location.reload()}
+              >
+                Try again
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
-  // Show no access message
+  // Permission check
   if (!workspace || (userRole !== "OWNER" && userRole !== "ADMIN")) {
     return (
-      <div className="text-center py-6 sm:py-8 text-muted-foreground text-sm sm:text-base">
-        You don't have permission to manage this workspace's settings.
-      </div>
+      <Card>
+        <CardContent className="pt-6">
+          <div className="text-center py-8">
+            <Shield className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="font-medium text-lg mb-2">Access Restricted</h3>
+            <p className="text-muted-foreground">
+              You need administrator permissions to manage workspace settings.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
-  // Render the form
+  const isOwner = userRole === "OWNER";
+  const canDelete = isOwner && workspace.memberCount === 1; // Only allow deletion if owner and no other members
+
   return (
-    <div className="space-y-4 sm:space-y-6">
-      <div>
-        <h2 className="text-xl sm:text-2xl font-semibold tracking-tight">Workspace Settings</h2>
-        <p className="text-sm sm:text-base text-muted-foreground">
-          Manage your workspace details and preferences.
-        </p>
-      </div>
-      
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6">
-        <div className="space-y-3 sm:space-y-4">
-          <div className="space-y-1 sm:space-y-2">
-            <Label htmlFor="name">Name</Label>
-            <Input
-              id="name"
-              placeholder="Workspace Name"
-              {...register("name")}
-              aria-invalid={!!errors.name}
-              className="text-sm sm:text-base"
-            />
-            {errors.name && (
-              <p className="text-xs sm:text-sm text-red-500">{errors.name.message}</p>
-            )}
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="border-b border-border pb-6">
+        <div className="flex items-start justify-between">
+          <div className="flex items-start gap-4">
+            <div className="p-2 rounded-lg bg-muted">
+              <Building2 className="h-6 w-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <h1 className="text-2xl font-semibold tracking-tight">{workspace.name}</h1>
+                {getPlanBadge(workspace.planType)}
+              </div>
+              <p className="text-muted-foreground">
+                Manage workspace settings and preferences
+              </p>
+              {workspace.createdAt && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Created {new Date(workspace.createdAt).toLocaleDateString()}
+                </p>
+              )}
+            </div>
           </div>
-          
-          <div className="space-y-1 sm:space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              placeholder="Describe the purpose of this workspace"
-              className="resize-none h-20 sm:h-24 text-sm sm:text-base"
-              {...register("description")}
-              aria-invalid={!!errors.description}
-            />
-            {errors.description && (
-              <p className="text-xs sm:text-sm text-red-500">{errors.description.message}</p>
-            )}
-          </div>
+          <Badge variant={isOwner ? "default" : "secondary"} className="text-xs">
+            {isOwner ? "Owner" : "Admin"}
+          </Badge>
         </div>
-        
-        <div className="flex flex-col sm:flex-row gap-3 sm:justify-between">
+      </div>
+
+      {/* General Settings */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Settings2 className="h-5 w-5" />
+            <CardTitle>General Settings</CardTitle>
+          </div>
+          <CardDescription>
+            Update your workspace name and description
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <div className="grid gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="name" className="text-sm font-medium">
+                  Workspace Name
+                </Label>
+                <Input
+                  id="name"
+                  placeholder="Enter workspace name"
+                  {...register("name")}
+                  aria-invalid={!!errors.name}
+                  className={errors.name ? "border-destructive focus-visible:ring-destructive" : ""}
+                />
+                {errors.name && (
+                  <p className="text-sm text-destructive flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    {errors.name.message}
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  {watchedName?.length || 0}/50 characters
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="description" className="text-sm font-medium">
+                    Description
+                  </Label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Info className="h-3 w-3 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">Help team members understand the workspace purpose</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+                <Textarea
+                  id="description"
+                  placeholder="Describe the purpose of this workspace (optional)"
+                  className={`resize-none h-24 ${errors.description ? "border-destructive focus-visible:ring-destructive" : ""}`}
+                  {...register("description")}
+                  aria-invalid={!!errors.description}
+                />
+                {errors.description && (
+                  <p className="text-sm text-destructive flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    {errors.description.message}
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  {watchedDescription?.length || 0}/500 characters
+                </p>
+              </div>
+            </div>
+          </form>
+        </CardContent>
+        <CardFooter className="border-t border-border pt-6">
           <Button
             type="submit"
             disabled={isSaving || !isDirty}
-            className="w-full sm:w-auto text-sm"
+            onClick={handleSubmit(onSubmit)}
+            className="ml-auto"
           >
             {isSaving ? (
               <>
-                <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin mr-1 sm:mr-2" />
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
                 Saving...
               </>
             ) : (
               <>
-                <Save className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <Save className="h-4 w-4 mr-2" />
                 Save Changes
               </>
             )}
           </Button>
-          
-          {userRole === "OWNER" && (
-            <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" className="w-full sm:w-auto text-sm">
-                  <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                  Delete Workspace
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent className="sm:max-w-md">
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete the workspace
-                    and remove all associated data.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
-                  <AlertDialogCancel className="w-full sm:w-auto">Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={handleDeleteWorkspace}
-                    className="bg-red-600 hover:bg-red-700 w-full sm:w-auto"
-                    disabled={isSaving}
-                  >
-                    {isSaving ? (
-                      <>
-                        <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin mr-1 sm:mr-2" />
-                        Deleting...
-                      </>
-                    ) : (
-                      "Delete Workspace"
-                    )}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          )}
-        </div>
-      </form>
-      
-      {userRole === "OWNER" && (
-        <Card className="mt-6 sm:mt-8 border-dashed border-red-200 bg-red-50 dark:bg-red-900/10 dark:border-red-800/30">
-          <CardHeader className="p-3 sm:p-4 pb-1 sm:pb-2">
-            <CardTitle className="text-red-600 dark:text-red-400 text-base sm:text-lg">Danger Zone</CardTitle>
-            <CardDescription className="text-red-500 dark:text-red-300 text-xs sm:text-sm">
-              Actions here can't be undone.
+        </CardFooter>
+      </Card>
+
+      {/* Danger Zone - Only for owners */}
+      {isOwner && (
+        <Card className="border-destructive/50">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-destructive" />
+              <CardTitle className="text-destructive">Danger Zone</CardTitle>
+            </div>
+            <CardDescription>
+              Irreversible and destructive actions
             </CardDescription>
           </CardHeader>
-          <CardContent className="p-3 sm:p-4 py-2 sm:py-3">
-            <p className="text-xs sm:text-sm text-red-600 dark:text-red-400">
-              Deleting this workspace will remove all associated data, including all
-              members, invitations, and content.
-            </p>
-          </CardContent>
-          <CardFooter className="p-3 sm:p-4 pt-0 sm:pt-1">
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" className="w-full sm:w-auto text-xs sm:text-sm">
-                  <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                  Delete Workspace
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent className="sm:max-w-md">
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete the workspace
-                    and remove all associated data.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
-                  <AlertDialogCancel className="w-full sm:w-auto">Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={handleDeleteWorkspace}
-                    className="bg-red-600 hover:bg-red-700 w-full sm:w-auto"
+          <CardContent className="space-y-4">
+            <div className="p-4 border border-destructive/20 rounded-lg bg-destructive/5">
+              <h4 className="font-medium text-sm mb-2">Delete Workspace</h4>
+              <p className="text-sm text-muted-foreground mb-3">
+                Once deleted, this workspace and all its data will be permanently removed. 
+                This action cannot be undone.
+              </p>
+              {!canDelete && workspace.memberCount && workspace.memberCount > 1 && (
+                <div className="p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-md mb-3">
+                  <p className="text-sm text-amber-800 dark:text-amber-200">
+                    You must remove all other members before deleting this workspace.
+                    Current members: {workspace.memberCount}
+                  </p>
+                </div>
+              )}
+              <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <AlertDialogTrigger asChild>
+                  <Button 
+                    variant="destructive" 
+                    size="sm"
+                    disabled={!canDelete}
                   >
+                    <Trash2 className="h-4 w-4 mr-2" />
                     Delete Workspace
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </CardFooter>
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent className="max-w-md">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="flex items-center gap-2">
+                      <AlertCircle className="h-5 w-5 text-destructive" />
+                      Delete Workspace
+                    </AlertDialogTitle>
+                    <AlertDialogDescription className="space-y-3">
+                      <p>
+                        This will permanently delete <strong>{workspace.name}</strong> and 
+                        all of its data, including:
+                      </p>
+                      <ul className="text-sm list-disc list-inside space-y-1 ml-4">
+                        <li>All workspace content</li>
+                        <li>Member access and permissions</li>
+                        <li>Integration settings</li>
+                        <li>Usage history and analytics</li>
+                      </ul>
+                      <p className="font-medium text-destructive">
+                        This action cannot be undone.
+                      </p>
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="confirmation" className="text-sm font-medium">
+                        Type <code className="bg-muted px-1 py-0.5 rounded text-xs">{workspace.name}</code> to confirm:
+                      </Label>
+                      <Input
+                        id="confirmation"
+                        value={confirmationText}
+                        onChange={(e) => setConfirmationText(e.target.value)}
+                        placeholder="Enter workspace name"
+                        className="mt-2"
+                      />
+                    </div>
+                  </div>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel 
+                      onClick={() => {
+                        setConfirmationText("");
+                        setDeleteDialogOpen(false);
+                      }}
+                    >
+                      Cancel
+                    </AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleDeleteWorkspace}
+                      disabled={confirmationText !== workspace.name || isDeleting}
+                      className="bg-destructive hover:bg-destructive/90"
+                    >
+                      {isDeleting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          Deleting...
+                        </>
+                      ) : (
+                        <>
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete Workspace
+                        </>
+                      )}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          </CardContent>
         </Card>
       )}
     </div>

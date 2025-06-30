@@ -15,7 +15,6 @@ interface Workspace {
   name: string;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 interface DateRange {
   from: Date;
   to: Date;
@@ -28,10 +27,11 @@ export const AnalyticsView = () => {
   const [userAnalytics, setUserAnalytics] = useState(null);
   const [selectedWorkspace, setSelectedWorkspace] = useState<string | null>(null);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
-  const [dateRange, setDateRange] = useState({
+  const [dateRange, setDateRange] = useState<DateRange>({
     from: new Date(new Date().setDate(new Date().getDate() - 30)),
     to: new Date(),
   });
+  const [activeTab, setActiveTab] = useState("overview");
 
   useEffect(() => {
     const fetchWorkspaces = async () => {
@@ -66,6 +66,8 @@ export const AnalyticsView = () => {
 
   useEffect(() => {
     const fetchAnalytics = async () => {
+      if (activeTab !== "overview") return;
+      
       setIsLoading(true);
       try {
         let url = `/api/analytics`;
@@ -78,23 +80,12 @@ export const AnalyticsView = () => {
           url += `?${params.toString()}`;
         }
         
-        // Fetch overall analytics
         const response = await fetch(url);
         if (!response.ok) {
           throw new Error(`Failed to fetch analytics: ${response.status}`);
         }
         const data = await response.json();
         setAnalytics(data);
-        
-        // Fetch user analytics
-        const userUrl = `/api/analytics/user${params.toString() ? '?' + params.toString() : ''}`;
-        const userResponse = await fetch(userUrl);
-        if (!userResponse.ok) {
-          throw new Error(`Failed to fetch user analytics: ${userResponse.status}`);
-        }
-        const userData = await userResponse.json();
-        setUserAnalytics(userData);
-        
       } catch (error) {
         console.error("Failed to fetch analytics:", error);
       } finally {
@@ -103,12 +94,42 @@ export const AnalyticsView = () => {
     };
 
     fetchAnalytics();
-  }, [dateRange]);
+  }, [dateRange, activeTab]);
+
+  // Separate effect for user analytics
+  useEffect(() => {
+    const fetchUserAnalytics = async () => {
+      if (activeTab !== "user") return;
+      
+      setIsLoading(true);
+      try {
+        // Build URL with query parameters
+        const url = new URL(`/api/analytics/user`, window.location.origin);
+        
+        if (dateRange.from) url.searchParams.append('startDate', dateRange.from.toISOString());
+        if (dateRange.to) url.searchParams.append('endDate', dateRange.to.toISOString());
+        
+        const response = await fetch(url.toString());
+        if (!response.ok) {
+          throw new Error(`Failed to fetch user analytics: ${response.status}`);
+        }
+        const data = await response.json();
+        setUserAnalytics(data);
+      } catch (error) {
+        console.error("Failed to fetch user analytics:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUserAnalytics();
+  }, [dateRange, activeTab]);
 
   useEffect(() => {
     const fetchWorkspaceAnalytics = async () => {
-      if (!selectedWorkspace) return;
+      if (!selectedWorkspace || activeTab !== "workspace") return;
       
+      setIsLoading(true);
       try {
         let url = `/api/analytics/${selectedWorkspace}`;
         const params = new URLSearchParams();
@@ -128,36 +149,38 @@ export const AnalyticsView = () => {
         setWorkspaceAnalytics(data);
       } catch (error) {
         console.error("Failed to fetch workspace analytics:", error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
     fetchWorkspaceAnalytics();
-  }, [selectedWorkspace, dateRange]);
+  }, [selectedWorkspace, dateRange, activeTab]);
 
   const handleWorkspaceChange = (workspaceId: string) => {
     setSelectedWorkspace(workspaceId);
   };
 
-  const handleDateRangeChange = (range: SetStateAction<{ from: Date; to: Date; }>) => {
+  const handleDateRangeChange = (range: SetStateAction<DateRange>) => {
     setDateRange(range);
   };
 
-  if (isLoading) {
-    return (
-      <div className="h-full flex items-center justify-center">
-        <Loader2 className="animate-spin my-auto" />
-      </div>
-    );
-  }
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    // Only set isLoading to true for tabs that need to fetch data
+    if (["overview", "workspace", "user"].includes(value)) {
+      setIsLoading(true);
+    }
+  };
 
   return (
     <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Analytics Dashboard</h1>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <h1 className="text-2xl md:text-3xl font-bold">Analytics Dashboard</h1>
         <DateRangePicker onDateRangeChange={handleDateRangeChange} />
       </div>
 
-      <Tabs defaultValue="overview" className="w-full">
+      <Tabs defaultValue="overview" className="w-full" onValueChange={handleTabChange}>
         <TabsList className="mb-6">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="workspace">Workspace</TabsTrigger>
@@ -167,7 +190,17 @@ export const AnalyticsView = () => {
         </TabsList>
         
         <TabsContent value="overview">
-          {analytics && <Overview data={analytics} />}
+          {isLoading ? (
+            <div className="h-64 flex items-center justify-center">
+              <Loader2 className="animate-spin my-auto" />
+            </div>
+          ) : analytics ? (
+            <Overview data={analytics} />
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">No analytics data available</p>
+            </div>
+          )}
         </TabsContent>
         
         <TabsContent value="workspace">
@@ -185,11 +218,31 @@ export const AnalyticsView = () => {
               ))}
             </select>
           </div>
-          {workspaceAnalytics && <WorkspaceAnalytics data={workspaceAnalytics} />}
+          {isLoading ? (
+            <div className="h-64 flex items-center justify-center">
+              <Loader2 className="animate-spin my-auto" />
+            </div>
+          ) : workspaceAnalytics ? (
+            <WorkspaceAnalytics data={workspaceAnalytics} />
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">Select a workspace to view analytics</p>
+            </div>
+          )}
         </TabsContent>
         
         <TabsContent value="user">
-          {userAnalytics && <UserAnalytics data={userAnalytics} />}
+          {isLoading ? (
+            <div className="h-64 flex items-center justify-center">
+              <Loader2 className="animate-spin my-auto" />
+            </div>
+          ) : userAnalytics ? (
+            <UserAnalytics data={userAnalytics} />
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">No user analytics data available</p>
+            </div>
+          )}
         </TabsContent>
         
         <TabsContent value="trends">
@@ -197,7 +250,27 @@ export const AnalyticsView = () => {
         </TabsContent>
         
         <TabsContent value="team">
-          <TeamPerformance workspaceId={selectedWorkspace || ""} />
+          {!selectedWorkspace ? (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">Please select a workspace first</p>
+              <div className="mt-4">
+                <select 
+                  className="form-select w-full max-w-xs p-2 border rounded-md bg-transparent"
+                  value={selectedWorkspace || ""}
+                  onChange={(e) => handleWorkspaceChange(e.target.value)}
+                >
+                  <option value="" disabled>Select a workspace</option>
+                  {workspaces.map((workspace) => (
+                    <option key={workspace.id} value={workspace.id}>
+                      {workspace.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          ) : (
+            <TeamPerformance workspaceId={selectedWorkspace} />
+          )}
         </TabsContent>
       </Tabs>
     </div>

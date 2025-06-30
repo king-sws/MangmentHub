@@ -20,8 +20,8 @@ interface ProductivityTrendsProps {
 
 interface DailyProductivity {
   date: string;
-  tasksCompleted: number;
   tasksCreated: number;
+  tasksCompleted: number;
 }
 
 export const ProductivityTrends = ({ startDate, endDate }: ProductivityTrendsProps) => {
@@ -55,18 +55,11 @@ export const ProductivityTrends = ({ startDate, endDate }: ProductivityTrendsPro
           );
           setData(sortedData);
         } else {
-          // If the API doesn't yet return real data, create sample data
-          // You can remove this once your API is implemented
-          const sampleData = generateSampleData(startDate, endDate);
-          setData(sampleData);
+          throw new Error("Invalid data format received from server");
         }
       } catch (error) {
         setError(error instanceof Error ? error.message : "Failed to fetch productivity data");
         console.error("Failed to fetch productivity data:", error);
-        
-        // Generate sample data on error for development
-        const sampleData = generateSampleData(startDate, endDate);
-        setData(sampleData);
       } finally {
         setLoading(false);
       }
@@ -179,26 +172,3 @@ export const ProductivityTrends = ({ startDate, endDate }: ProductivityTrendsPro
     </div>
   );
 };
-
-// Function to generate sample data for development/demo purposes
-function generateSampleData(startDate: Date, endDate: Date): DailyProductivity[] {
-  const data: DailyProductivity[] = [];
-  const currentDate = new Date(startDate);
-  
-  while (currentDate <= endDate) {
-    // Generate random but realistic data
-    const tasksCreated = Math.floor(Math.random() * 10) + 1;
-    const tasksCompleted = Math.floor(Math.random() * tasksCreated) + 1;
-    
-    data.push({
-      date: new Date(currentDate).toISOString().split('T')[0],
-      tasksCreated,
-      tasksCompleted,
-    });
-    
-    // Move to next day
-    currentDate.setDate(currentDate.getDate() + 1);
-  }
-  
-  return data;
-}

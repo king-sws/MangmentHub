@@ -4,6 +4,7 @@ import './globals.css'
 import { Toaster } from 'sonner'
 import { SessionProvider } from "next-auth/react";
 import { ThemeProvider } from '@/components/theme-provider'
+// import { SocketProvider } from '@/components/providers/SocketProvider';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -15,14 +16,17 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 })
 
+
 export const metadata: Metadata = {
-  title: 'ManageHub',
-  description: 'Project management application',
+  title: 'Blutto',
+  description: 'Complete workspace management platform with task management, team chat, analytics dashboard, Kanban boards, calendar integration, and collaborative workspace features with member invitations',
 }
 
 function AuthProvider({ children }: { children: React.ReactNode }) {
   return <SessionProvider>{children}</SessionProvider>;
 }
+
+
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -35,7 +39,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           disableTransitionOnChange
         >
           <AuthProvider>
-            {children}
+            {/* <SocketProvider> */}
+              {children}
+            {/* </SocketProvider> */}
             <Toaster />
           </AuthProvider>
         </ThemeProvider>

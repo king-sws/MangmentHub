@@ -1,7 +1,15 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
-import { Progress } from "@/components/ui/progress";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
+
+interface WorkspaceTaskStats {
+  workspaceId: string;
+  name: string;
+  total: number;
+  completed: number;
+}
 
 interface UserAnalyticsProps {
   data: {
@@ -18,43 +26,25 @@ interface UserAnalyticsProps {
       IN_REVIEW: number;
       DONE: number;
     };
-    cardsByWorkspace: Array<{
-      workspaceId: string;
-      name: string;
-      total: number;
-      completed: number;
-    }>;
+    cardsByWorkspace: WorkspaceTaskStats[];
+    timestamp: string;
   };
 }
 
-const STATUS_COLORS = {
-  BACKLOG: "#94a3b8",
-  TODO: "#38bdf8",
-  IN_PROGRESS: "#a78bfa",
-  IN_REVIEW: "#fbbf24",
-  DONE: "#4ade80"
-};
-
-const STATUS_LABELS = {
-  BACKLOG: "Backlog",
-  TODO: "To Do",
-  IN_PROGRESS: "In Progress",
-  IN_REVIEW: "In Review",
-  DONE: "Done"
-};
-
 export const UserAnalytics = ({ data }: UserAnalyticsProps) => {
   const { overview, cardsByStatus, cardsByWorkspace } = data;
-  
-  // Prepare data for status chart
-  const statusChartData = Object.keys(cardsByStatus).map(statusKey => {
-    const status = statusKey as keyof typeof STATUS_LABELS;
-    return {
-      name: STATUS_LABELS[status] || status,
-      value: cardsByStatus[status],
-      status
-    };
-  });
+
+  // Prepare data for status distribution chart
+  const statusData = [
+    { name: "Backlog", value: cardsByStatus.BACKLOG, color: "#94a3b8" },
+    { name: "To Do", value: cardsByStatus.TODO, color: "#3b82f6" },
+    { name: "In Progress", value: cardsByStatus.IN_PROGRESS, color: "#f59e0b" },
+    { name: "In Review", value: cardsByStatus.IN_REVIEW, color: "#8b5cf6" },
+    { name: "Done", value: cardsByStatus.DONE, color: "#22c55e" }
+  ];
+
+  // Filter out status categories with zero cards
+  const filteredStatusData = statusData.filter(item => item.value > 0);
 
   return (
     <div className="space-y-6">
@@ -62,7 +52,7 @@ export const UserAnalytics = ({ data }: UserAnalyticsProps) => {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Assigned Tasks
+              Total Assigned Tasks
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -105,66 +95,75 @@ export const UserAnalytics = ({ data }: UserAnalyticsProps) => {
           </CardContent>
         </Card>
       </div>
-
+      
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="col-span-1">
           <CardHeader>
-            <CardTitle>My Task Status</CardTitle>
+            <CardTitle>Task Status Distribution</CardTitle>
           </CardHeader>
           <CardContent className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={statusChartData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  outerRadius={100}
-                  fill="#8884d8"
-                  dataKey="value"
-                  nameKey="name"
-                  label={({ name, percent }) =>
-                    `${name}: ${(percent * 100).toFixed(0)}%`
-                  }
-                >
-                  {statusChartData.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={STATUS_COLORS[entry.status] || `#${Math.floor(Math.random()*16777215).toString(16)}`}
-                    />
-                  ))}
-                </Pie>
-                <Legend />
-                <Tooltip formatter={(value) => [`${value} tasks`, 'Count']} />
-              </PieChart>
-            </ResponsiveContainer>
+            {filteredStatusData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={filteredStatusData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={100}
+                    paddingAngle={2}
+                    dataKey="value"
+                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  >
+                    {filteredStatusData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(value: number) => [`${value} tasks`, 'Count']}
+                  />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center">
+                <p className="text-muted-foreground">No task data available</p>
+              </div>
+            )}
           </CardContent>
         </Card>
         
         <Card className="col-span-1">
           <CardHeader>
-            <CardTitle>Tasks by Workspace</CardTitle>
+            <CardTitle>My Tasks by Workspace</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-6">
-              {cardsByWorkspace.map((workspace) => {
-                const completionRate = workspace.total > 0 
-                  ? (workspace.completed / workspace.total) * 100 
-                  : 0;
-                
-                return (
-                  <div key={`workspace-${workspace.workspaceId}`} className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="font-medium">{workspace.name}</span>
+            {cardsByWorkspace && cardsByWorkspace.length > 0 ? (
+              <div className="space-y-4">
+                {cardsByWorkspace.map((workspace) => (
+                  <div key={workspace.workspaceId} className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <h4 className="font-medium">{workspace.name}</h4>
                       <span className="text-sm text-muted-foreground">
-                        {workspace.completed} / {workspace.total} ({completionRate.toFixed(1)}%)
+                        {workspace.completed} / {workspace.total} tasks
                       </span>
                     </div>
-                    <Progress value={completionRate} className="h-2" />
+                    <div className="h-2 bg-slate-200 rounded overflow-hidden">
+                      <div 
+                        className="h-full bg-blue-500 rounded"
+                        style={{ 
+                          width: `${workspace.total > 0 ? (workspace.completed / workspace.total) * 100 : 0}%` 
+                        }}
+                      />
+                    </div>
                   </div>
-                );
-              })}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="h-full flex items-center justify-center">
+                <p className="text-muted-foreground">No workspace data available</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

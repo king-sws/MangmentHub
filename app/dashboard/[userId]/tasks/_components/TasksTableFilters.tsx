@@ -70,113 +70,117 @@ export function TasksTableFilters({
   };
 
   return (
-    <div className="flex space-x-2 flex-wrap">
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="h-8 flex items-center gap-2">
-            <FilterIcon className="h-3.5 w-3.5" />
-            All statuses
-            {selectedStatuses.length > 0 && (
-              <span className="ml-1 rounded-full bg-primary w-4 h-4 text-[10px] flex items-center justify-center text-primary-foreground">
-                {selectedStatuses.length}
-              </span>
-            )}
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-48">
-          {statuses.map((status) => (
-            <DropdownMenuCheckboxItem
-              key={status}
-              checked={selectedStatuses.includes(status)}
-              onCheckedChange={() => toggleStatus(status)}
-            >
-              {status.charAt(0).toUpperCase() + status.slice(1).toLowerCase().replace("_", " ")}
-            </DropdownMenuCheckboxItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
+    <div className="flex flex-wrap gap-2 sm:gap-2">
+      <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="h-8 flex items-center gap-2 w-full sm:w-auto">
+              <FilterIcon className="h-3.5 w-3.5" />
+              <span className="truncate">All statuses</span>
+              {selectedStatuses.length > 0 && (
+                <span className="ml-1 rounded-full bg-primary w-4 h-4 text-[10px] flex items-center justify-center text-primary-foreground">
+                  {selectedStatuses.length}
+                </span>
+              )}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-48">
+            {statuses.map((status) => (
+              <DropdownMenuCheckboxItem
+                key={status}
+                checked={selectedStatuses.includes(status)}
+                onCheckedChange={() => toggleStatus(status)}
+              >
+                {status.charAt(0).toUpperCase() + status.slice(1).toLowerCase().replace("_", " ")}
+              </DropdownMenuCheckboxItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
 
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="h-8 flex items-center gap-2">
-            <FilterIcon className="h-3.5 w-3.5" />
-            All assignees
-            {selectedAssignees.length > 0 && (
-              <span className="ml-1 rounded-full bg-primary w-4 h-4 text-[10px] flex items-center justify-center text-primary-foreground">
-                {selectedAssignees.length}
-              </span>
-            )}
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-48">
-          {assignees.map((assignee) => (
-            <DropdownMenuCheckboxItem
-              key={assignee.id}
-              checked={selectedAssignees.includes(assignee.id)}
-              onCheckedChange={() => toggleAssignee(assignee.id)}
-            >
-              {assignee.name || assignee.email}
-            </DropdownMenuCheckboxItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="h-8 flex items-center gap-2 w-full sm:w-auto">
+              <FilterIcon className="h-3.5 w-3.5" />
+              <span className="truncate">All assignees</span>
+              {selectedAssignees.length > 0 && (
+                <span className="ml-1 rounded-full bg-primary w-4 h-4 text-[10px] flex items-center justify-center text-primary-foreground">
+                  {selectedAssignees.length}
+                </span>
+              )}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-48">
+            {assignees.map((assignee) => (
+              <DropdownMenuCheckboxItem
+                key={assignee.id}
+                checked={selectedAssignees.includes(assignee.id)}
+                onCheckedChange={() => toggleAssignee(assignee.id)}
+              >
+                {assignee.name || assignee.email}
+              </DropdownMenuCheckboxItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
 
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="h-8 flex items-center gap-2">
-            <FilterIcon className="h-3.5 w-3.5" />
-            All projects
-            {selectedProjects.length > 0 && (
-              <span className="ml-1 rounded-full bg-primary w-4 h-4 text-[10px] flex items-center justify-center text-primary-foreground">
-                {selectedProjects.length}
-              </span>
-            )}
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-48">
-          {projects.map((project) => (
-            <DropdownMenuCheckboxItem
-              key={project.id}
-              checked={selectedProjects.includes(project.id)}
-              onCheckedChange={() => toggleProject(project.id)}
-            >
-              {project.title}
-            </DropdownMenuCheckboxItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="h-8 flex items-center gap-2 w-full sm:w-auto">
+              <FilterIcon className="h-3.5 w-3.5" />
+              <span className="truncate">All projects</span>
+              {selectedProjects.length > 0 && (
+                <span className="ml-1 rounded-full bg-primary w-4 h-4 text-[10px] flex items-center justify-center text-primary-foreground">
+                  {selectedProjects.length}
+                </span>
+              )}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-48">
+            {projects.map((project) => (
+              <DropdownMenuCheckboxItem
+                key={project.id}
+                checked={selectedProjects.includes(project.id)}
+                onCheckedChange={() => toggleProject(project.id)}
+              >
+                {project.title}
+              </DropdownMenuCheckboxItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
 
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button
-            id="date"
-            variant="outline"
-            size="sm" 
-            className={cn(
-              "h-8 flex items-center gap-2",
-              !dueDate && "text-muted-foreground"
-            )}
-          >
-            <CalendarIcon className="h-3.5 w-3.5" />
-            {dueDate ? format(dueDate, "PPP") : "Due date"}
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
-          <Calendar
-            mode="single"
-            selected={dueDate}
-            onSelect={onDueDateChange}
-            initialFocus
-          />
-        </PopoverContent>
-      </Popover>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              id="date"
+              variant="outline"
+              size="sm" 
+              className={cn(
+                "h-8 flex items-center gap-2 w-full sm:w-auto",
+                !dueDate && "text-muted-foreground"
+              )}
+            >
+              <CalendarIcon className="h-3.5 w-3.5" />
+              <span className="truncate">{dueDate ? format(dueDate, "PPP") : "Due date"}</span>
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={dueDate}
+              onSelect={onDueDateChange}
+              initialFocus
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
 
       {(selectedStatuses.length > 0 || selectedAssignees.length > 0 || 
         selectedProjects.length > 0 || dueDate) && (
         <Button 
           variant="ghost" 
           size="sm" 
-          className="h-8"
+          className="h-8 ml-auto"
           onClick={() => {
             onStatusChange([]);
             onAssigneeChange([]);

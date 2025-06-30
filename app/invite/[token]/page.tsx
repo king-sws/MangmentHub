@@ -169,7 +169,7 @@ export default function InvitePage({ params }: { params: { token: string } }) {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue={searchParams.get("tab") || "signin"}>
+          <Tabs defaultValue={(searchParams?.get("tab")) || "sign-in"}>
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="signin">Sign In</TabsTrigger>
               <TabsTrigger value="signup">Sign Up</TabsTrigger>

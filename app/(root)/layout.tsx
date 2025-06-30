@@ -1,18 +1,20 @@
+// app/(marketing)/layout.tsx
 import React from 'react'
 import Navbar from './_components/Navbar'
 import Footer from './_components/Footer'
+import { MarketingThemeProvider } from '@/components/marketing-theme-provider'
 
 const MarketingLayout = ({children}: {children: React.ReactNode}) => {
   return (
-    <div>
-        {/* Navbar */}
+    <MarketingThemeProvider>
+      <div className="min-h-screen flex flex-col bg-slate-100"> 
         <Navbar />
-        <main className="pt-40 pb-20 bg-slate-100">
-            {children}
+        <main className="">
+          {children}
         </main>
-        {/* Footer */}
         <Footer />
-    </div>
+      </div>
+    </MarketingThemeProvider>
   )
 }
 

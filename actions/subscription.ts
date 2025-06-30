@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// lib/subscription-actions.ts
+// lib/subscription.ts
 "use server";
 
 import { prisma } from "@/lib/prisma";
@@ -8,6 +8,7 @@ import { revalidatePath } from "next/cache";
 import { addDays } from "date-fns";
 import { PlanType } from "@/lib/plans";
 import { createCheckoutSession, verifyCheckoutSession, stripe } from "@/actions/stripe";
+import { updateTransactionStatus } from "@/lib/transaction-helper";
 
 // Get current user's subscription
 export async function getCurrentSubscription() {
@@ -50,7 +51,9 @@ export async function createSubscriptionCheckout(plan: PlanType) {
   }
 
   try {
-    // Create the checkout session
+    console.log(`Creating checkout session for user ${session.user.id} - Plan: ${plan}`);
+    
+    // Create the checkout session (this will create a transaction record)
     const checkoutSession = await createCheckoutSession({
       userId: session.user.id,
       plan,
@@ -61,10 +64,13 @@ export async function createSubscriptionCheckout(plan: PlanType) {
       throw new Error("Failed to create checkout session");
     }
     
+    console.log(`Checkout session created: ${checkoutSession.sessionId} for transaction: ${checkoutSession.transactionId}`);
+    
     return { 
       success: true, 
       sessionId: checkoutSession.sessionId,
-      url: checkoutSession.url
+      url: checkoutSession.url,
+      transactionId: checkoutSession.transactionId
     };
   } catch (error) {
     console.error("Failed to create checkout session:", error);
@@ -73,6 +79,7 @@ export async function createSubscriptionCheckout(plan: PlanType) {
 }
 
 // Verify and confirm a Stripe checkout session
+// Fixed confirmSubscriptionCheckout function
 export async function confirmSubscriptionCheckout(sessionId: string) {
   const session = await auth();
  
@@ -81,6 +88,8 @@ export async function confirmSubscriptionCheckout(sessionId: string) {
   }
 
   try {
+    console.log(`Confirming checkout session: ${sessionId} for user: ${session.user.id}`);
+    
     // Verify the checkout session with Stripe
     const checkoutSession = await verifyCheckoutSession(sessionId);
     
@@ -89,25 +98,78 @@ export async function confirmSubscriptionCheckout(sessionId: string) {
     }
 
     // Extract metadata from the session
-    const { plan, userId } = checkoutSession.metadata as { plan: PlanType; userId: string };
+    const { plan, userId, transactionId } = checkoutSession.metadata as { 
+      plan: PlanType; 
+      userId: string; 
+      transactionId?: string;
+    };
     
     // Verify that the session belongs to the current user
     if (userId !== session.user.id) {
       throw new Error("Session does not belong to current user");
     }
 
-    // Get customer and subscription IDs from the session
-    const customerId = checkoutSession.customer as string;
-    const subscriptionId = checkoutSession.subscription as string;
+    // FIXED: Ensure we get the IDs as strings, not full objects
+    const customerId = typeof checkoutSession.customer === 'string' 
+      ? checkoutSession.customer 
+      : checkoutSession.customer?.id;
+      
+    const subscriptionId = typeof checkoutSession.subscription === 'string'
+      ? checkoutSession.subscription
+      : checkoutSession.subscription?.id;
 
-    // Update user subscription
-    return updateSubscription(plan, {
+    if (!customerId || !subscriptionId) {
+      throw new Error("Missing customer or subscription ID from checkout session");
+    }
+
+    console.log(`Checkout session verified - TransactionId: ${transactionId}, Plan: ${plan}`);
+    console.log(`Customer ID: ${customerId}, Subscription ID: ${subscriptionId}`);
+
+    // Update the transaction status if we have the transaction ID
+    if (transactionId) {
+      try {
+        await updateTransactionStatus(transactionId, 'COMPLETED' as any, {
+          stripeCustomerId: customerId,
+          stripeSubscriptionId: subscriptionId,
+          stripeSessionId: sessionId,
+          completedAt: new Date(),
+        });
+        console.log(`Transaction ${transactionId} marked as completed`);
+      } catch (transactionError) {
+        console.error(`Failed to update transaction ${transactionId}:`, transactionError);
+        // Don't throw here - the payment succeeded, so continue with subscription update
+      }
+    }
+
+    // Update user subscription with string IDs
+    const result = await updateSubscription(plan, {
       stripeCustomerId: customerId,
       stripeSubscriptionId: subscriptionId,
       paymentId: sessionId
     });
+
+    console.log(`Subscription updated for user ${session.user.id} - Plan: ${plan}`);
+    
+    return result;
   } catch (error) {
     console.error("Failed to confirm checkout session:", error);
+    
+    // Try to mark transaction as failed if we can extract the transaction ID
+    try {
+      const checkoutSession = await verifyCheckoutSession(sessionId);
+      const transactionId = checkoutSession?.metadata?.transactionId;
+      
+      if (transactionId) {
+        await updateTransactionStatus(transactionId, 'FAILED' as any, {
+          failureReason: (error as Error).message,
+          failedAt: new Date(),
+        });
+        console.log(`Transaction ${transactionId} marked as failed`);
+      }
+    } catch (updateError) {
+      console.error("Failed to update transaction status:", updateError);
+    }
+    
     throw new Error(`Failed to confirm subscription: ${(error as Error).message}`);
   }
 }
@@ -128,6 +190,8 @@ export async function updateSubscription(
   }
 
   try {
+    console.log(`Updating subscription for user ${session.user.id} to plan: ${plan}`);
+    
     // Update user's subscription
     const updateData: any = {
       plan: plan,
@@ -157,15 +221,24 @@ export async function updateSubscription(
       data: updateData,
     });
     
+    console.log(`User ${session.user.id} subscription updated successfully:`, {
+      plan: user.plan,
+      planStarted: user.planStarted,
+      planExpires: user.planExpires,
+      stripeCustomerId: user.stripeCustomerId,
+      stripeSubscriptionId: user.stripeSubscriptionId
+    });
+    
     // Revalidate all paths that might display plan information
     revalidatePath('/dashboard');
     revalidatePath('/settings');
+    revalidatePath('/settings/subscription');
     revalidatePath('/workspace/[workspaceId]');
    
     return { success: true, user };
   } catch (error) {
     console.error("Failed to update subscription:", error);
-    throw new Error("Failed to update subscription");
+    throw new Error(`Failed to update subscription: ${(error as Error).message}`);
   }
 }
 
@@ -188,6 +261,8 @@ export async function cancelSubscription() {
       await stripe.subscriptions.update(user.stripeSubscriptionId, {
         cancel_at_period_end: true,
       });
+      
+      console.log(`Stripe subscription ${user.stripeSubscriptionId} marked for cancellation`);
     }
     
     // Update user's plan to FREE after current period

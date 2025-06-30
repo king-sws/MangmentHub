@@ -5,31 +5,109 @@ import { prisma } from "@/lib/prisma";
 import { ProfileContent } from "./_components/ProfileContent";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Separator } from "@/components/ui/separator";
+import { Card, CardContent } from "@/components/ui/card";
 
 export const metadata: Metadata = {
-  title: "User Profile",
-  description: "View your profile information",
+  title: "Profile",
+  description: "Manage your profile and account settings",
 };
 
-// Loading skeleton for the profile page
+// Professional loading skeleton
 function ProfileSkeleton() {
   return (
-    <div className="bg-white shadow rounded-lg overflow-hidden">
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 px-6 py-8">
-        <div className="flex flex-col items-center sm:flex-row sm:items-start">
-          <Skeleton className="h-28 w-28 rounded-full" />
-          <div className="mt-4 sm:mt-0 sm:ml-6 text-center sm:text-left">
-            <Skeleton className="h-8 w-40 bg-blue-400" />
-            <Skeleton className="h-4 w-24 mt-2 bg-blue-400" />
+    <div className="space-y-6">
+      {/* Profile Header Skeleton */}
+      <Card className="border-0 shadow-sm bg-card">
+        <CardContent className="pt-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+            {/* Avatar skeleton */}
+            <div className="w-20 h-20 sm:w-24 sm:h-24 bg-muted rounded-xl animate-pulse" />
+            
+            {/* User info skeleton */}
+            <div className="flex-1 space-y-3">
+              <div className="space-y-2">
+                <div className="h-8 w-48 bg-muted rounded animate-pulse" />
+                <div className="h-5 w-32 bg-muted rounded animate-pulse" />
+              </div>
+              <div className="flex gap-2">
+                <div className="h-6 w-20 bg-muted rounded animate-pulse" />
+                <div className="h-6 w-16 bg-muted rounded animate-pulse" />
+              </div>
+            </div>
+            
+            {/* Button skeleton */}
+            <div className="h-10 w-32 bg-muted rounded animate-pulse" />
           </div>
-        </div>
+        </CardContent>
+      </Card>
+
+      {/* Stats skeleton */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {[1, 2, 3].map((i) => (
+          <Card key={i} className="border-0 shadow-sm bg-card">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 bg-muted rounded-lg animate-pulse" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-8 w-12 bg-muted rounded animate-pulse" />
+                  <div className="h-4 w-24 bg-muted rounded animate-pulse" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
-      <div className="p-6">
-        <Skeleton className="h-6 w-40 mb-4" />
-        <div className="space-y-4">
-          <Skeleton className="h-24 w-full" />
-          <Skeleton className="h-24 w-full" />
+
+      {/* Main content skeleton */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          {[1, 2].map((i) => (
+            <Card key={i} className="border-0 shadow-sm bg-card">
+              <CardContent className="p-6">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 bg-muted rounded-lg animate-pulse" />
+                    <div className="space-y-2">
+                      <div className="h-6 w-32 bg-muted rounded animate-pulse" />
+                      <div className="h-4 w-48 bg-muted rounded animate-pulse" />
+                    </div>
+                  </div>
+                  <div className="border-t border-border pt-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      {[1, 2, 3, 4].map((j) => (
+                        <div key={j} className="space-y-2">
+                          <div className="h-4 w-20 bg-muted rounded animate-pulse" />
+                          <div className="h-5 w-full bg-muted rounded animate-pulse" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        
+        <div className="space-y-6">
+          <Card className="border-0 shadow-sm bg-card">
+            <CardContent className="p-6">
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 bg-muted rounded-lg animate-pulse" />
+                  <div className="space-y-2">
+                    <div className="h-6 w-24 bg-muted rounded animate-pulse" />
+                    <div className="h-4 w-32 bg-muted rounded animate-pulse" />
+                  </div>
+                </div>
+                <div className="border-t border-border pt-4 space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="h-16 bg-muted rounded-lg animate-pulse" />
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
@@ -37,14 +115,12 @@ function ProfileSkeleton() {
 }
 
 export default async function ProfilePage({ params }: { params: { userId: string } }) {
-  // Check authentication
   const session = await auth();
- 
+  
   if (!session?.user) {
     redirect("/sign-in");
   }
- 
-  // Fetch the user data to display on profile
+
   const user = await prisma.user.findUnique({
     where: { id: params.userId },
     select: {
@@ -54,6 +130,11 @@ export default async function ProfilePage({ params }: { params: { userId: string
       image: true,
       role: true,
       emailVerified: true,
+      plan: true,
+      planExpires: true,
+      planStarted: true,
+      createdAt: true,
+      lastLogin: true,
       accounts: {
         select: {
           provider: true
@@ -63,69 +144,71 @@ export default async function ProfilePage({ params }: { params: { userId: string
         select: {
           id: true,
           name: true,
+          createdAt: true,
           _count: {
-            select: { boards: true }
+            select: { 
+              boards: true,
+              members: true 
+            }
           }
         },
         orderBy: {
           updatedAt: 'desc'
         },
-        take: 5 // Limit to 5 most recent workspaces
+        take: 6
+      },
+      _count: {
+        select: {
+          workspaces: true,
+          assignedCards: true,
+          chatMessages: true
+        }
       }
     }
   });
- 
+
   if (!user) {
     notFound();
   }
- 
-  // Determine if the current user can view this profile (themselves or admin)
-  const canViewFullProfile =
-    session.user.id === params.userId ||
+
+  const canViewFullProfile = 
+    session.user.id === params.userId || 
     session.user.role === "ADMIN";
- 
-  // Get provider information
-  const provider = user.accounts.length > 0
-    ? user.accounts[0].provider
+
+  const provider = user.accounts.length > 0 
+    ? user.accounts[0].provider 
     : "credentials";
- 
-  // Format the user data for the profile component
+
   const profileData = {
     ...user,
     provider
   };
- 
-  return (
-    <div className="max-w-3xl mx-auto py-8 px-4 sm:px-6">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">User Profile</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          {canViewFullProfile
-            ? "Your personal profile information"
-            : `Viewing profile for ${user.name || "User"}`}
-        </p>
-      </div>
-     
-      <Suspense fallback={<ProfileSkeleton />}>
-        <ProfileContent
-          user={profileData}
-          canViewFullProfile={canViewFullProfile}
-        />
-      </Suspense>
 
-      {canViewFullProfile && (
-        <div className="mt-8 text-center text-sm text-gray-500">
-          <p>
-            Need to update your profile information?{' '}
-            <a 
-              href={`/dashboard/${user.id}/settings`} 
-              className="text-indigo-600 hover:text-indigo-500"
-            >
-              Go to settings
-            </a>
+  return (
+    <div className="container max-w-6xl mx-auto py-6 px-4 md:px-6">
+      <div className="space-y-6">
+        {/* Page Header */}
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">
+            {canViewFullProfile ? "Profile" : "User Profile"}
+          </h1>
+          <p className="text-muted-foreground">
+            {canViewFullProfile 
+              ? "Manage your account settings and view your activity" 
+              : `Viewing ${user.name || "User"}'s profile`}
           </p>
         </div>
-      )}
+        
+        <Separator />
+
+        {/* Profile Content */}
+        <Suspense fallback={<ProfileSkeleton />}>
+          <ProfileContent 
+            user={profileData} 
+            canViewFullProfile={canViewFullProfile} 
+          />
+        </Suspense>
+      </div>
     </div>
   );
 }

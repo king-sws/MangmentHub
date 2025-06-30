@@ -38,28 +38,29 @@ export function CreateBoardButton({
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
-  const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
+const onSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setIsLoading(true);
 
-    try {
-      const board = await createBoard({
-        title: title.trim(),
-        workspaceId,
-      });
-      
-      toast.success('Board created!');
-      if (board) {
-        setTitle("");
-        setOpen(false);
-        router.refresh();
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error('Failed to create board');
-      setIsLoading(false);
+  try {
+    const board = await createBoard({
+      title: title.trim(),
+      workspaceId,
+    });
+    
+    toast.success('Board created!');
+    if (board) {
+      setTitle("");
+      setOpen(false);
+      router.refresh();
     }
-  };
+  } catch (error) {
+    console.error(error);
+    toast.error('Failed to create board');
+  } finally {
+    setIsLoading(false); // This ensures loading state is reset regardless
+  }
+};
 
   if (disabled) {
     return (
@@ -79,7 +80,7 @@ export function CreateBoardButton({
               <div>
                 <p>You've reached your board limit ({currentCount}/{limit}) on the {plan} plan.</p>
                 <Link 
-                  href="/settings/billing" 
+                  href="/settings/subscription" 
                   className="text-primary hover:underline text-xs block mt-1"
                 >
                   Upgrade to create more boards
