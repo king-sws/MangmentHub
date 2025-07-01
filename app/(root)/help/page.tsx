@@ -1,7 +1,7 @@
+
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable react/no-unescaped-entities */
 'use client'
-
 
 import React, { useState, useEffect } from 'react';
 import { 
@@ -27,6 +27,12 @@ import {
   ThumbsDown,
   Mail
 } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 // Define interfaces for TypeScript
 interface Article {
@@ -54,6 +60,11 @@ const HelpCenter = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
+
+  // Scroll to top function
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   useEffect(() => {
     // Check system preference for dark mode
@@ -192,44 +203,47 @@ const HelpCenter = () => {
   const handleCategoryClick = (category: Category) => {
     setSelectedCategory(category);
     setSelectedArticle(null);
+    scrollToTop();
   };
 
   const handleArticleClick = (article: Article, category: Category) => {
     setSelectedArticle({ ...article, category: category.title, categoryColor: category.textColor });
+    scrollToTop();
   };
 
   const handleBackToCategories = () => {
     setSelectedCategory(null);
     setSelectedArticle(null);
+    scrollToTop();
   };
 
   const handleBackToCategory = () => {
     setSelectedArticle(null);
+    scrollToTop();
   };
 
   // Article content component
   const ArticleContent = ({ article }: { article: Article }) => (
-    <div className="max-w-4xl mx-auto">
-      <button
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <Button
         onClick={handleBackToCategory}
-        className="flex items-center text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 mb-8 transition-colors group"
+        variant="ghost"
+        className="mb-8 hover:bg-slate-100 dark:hover:bg-slate-800"
       >
-        <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
+        <ArrowLeft className="w-4 h-4 mr-2" />
         Back to {article.category}
-      </button>
+      </Button>
       
-      <div className="relative overflow-hidden rounded-3xl bg-white/60 dark:bg-white/5 shadow-xl">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 to-purple-600/5 dark:from-blue-400/5 dark:to-purple-400/5" />
-        
-        <div className="relative p-8 lg:p-12">
-          <div className="mb-8">
-            <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold ${article.categoryColor} bg-opacity-20`}>
+      <Card className="overflow-hidden border-0 shadow-xl bg-white/60 dark:bg-white/5">
+        <CardHeader className="p-6 sm:p-8 lg:p-12">
+          <div className="mb-6">
+            <Badge variant="secondary" className={`${article.categoryColor} bg-opacity-20 mb-4`}>
               {article.category}
-            </span>
-            <h1 className="text-4xl lg:text-5xl font-bold text-slate-900 dark:text-white mt-4 mb-6 leading-tight">
+            </Badge>
+            <CardTitle className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 dark:text-white mb-6 leading-tight">
               {article.title}
-            </h1>
-            <div className="flex items-center gap-6 text-slate-500 dark:text-slate-400">
+            </CardTitle>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 text-slate-500 dark:text-slate-400">
               <div className="flex items-center gap-2">
                 <Clock className="w-4 h-4" />
                 <span>Estimated read time: {article.readTime}</span>
@@ -240,14 +254,16 @@ const HelpCenter = () => {
               </div>
             </div>
           </div>
-          
+        </CardHeader>
+        
+        <CardContent className="p-6 sm:p-8 lg:p-12 pt-0">
           <div className="prose prose-lg prose-slate dark:prose-invert max-w-none">
-            <p className="text-xl text-slate-600 dark:text-slate-300 mb-8 leading-relaxed">
+            <p className="text-lg sm:text-xl text-slate-600 dark:text-slate-300 mb-8 leading-relaxed">
               This comprehensive guide will walk you through everything you need to know about this topic. 
               We've designed this to be your go-to resource with practical examples and actionable insights.
             </p>
             
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-3">
+            <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-3">
               <span className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center text-white font-bold text-sm">1</span>
               Getting Started
             </h2>
@@ -256,22 +272,15 @@ const HelpCenter = () => {
               ensures you'll get the most out of the features and capabilities available to you.
             </p>
             
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl p-6 mb-8">
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
-                  <Zap className="w-4 h-4 text-white" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-blue-900 dark:text-blue-100 mb-2">Pro Tip</h4>
-                  <p className="text-blue-800 dark:text-blue-200 leading-relaxed">
-                    Take advantage of our guided onboarding flow to set up your account efficiently. 
-                    This will save you time and ensure you don't miss any important configuration steps.
-                  </p>
-                </div>
-              </div>
-            </div>
+            <Alert className="mb-8 border-blue-200 dark:border-blue-800 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20">
+              <Zap className="w-4 h-4 text-blue-500" />
+              <AlertDescription className="text-blue-800 dark:text-blue-200">
+                <strong>Pro Tip:</strong> Take advantage of our guided onboarding flow to set up your account efficiently. 
+                This will save you time and ensure you don't miss any important configuration steps.
+              </AlertDescription>
+            </Alert>
             
-            <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-3">
+            <h3 className="text-lg sm:text-xl font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-3">
               <span className="w-6 h-6 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-md flex items-center justify-center text-white font-bold text-xs">✓</span>
               Step 1: Initial Configuration
             </h3>
@@ -294,7 +303,7 @@ const HelpCenter = () => {
               </li>
             </ul>
             
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-3">
+            <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-3">
               <span className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center text-white font-bold text-sm">2</span>
               Advanced Configuration
             </h2>
@@ -303,77 +312,75 @@ const HelpCenter = () => {
               help you customize your experience and maximize productivity.
             </p>
             
-            <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-6 mb-8">
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 bg-amber-500 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
-                  <HelpCircle className="w-4 h-4 text-white" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-amber-900 dark:text-amber-100 mb-2">Important Note</h4>
-                  <p className="text-amber-800 dark:text-amber-200 leading-relaxed">
-                    Some advanced features require a Pro or Enterprise subscription. Check your plan 
-                    details to see which features are available to you.
-                  </p>
-                </div>
-              </div>
-            </div>
+            <Alert className="mb-8 border-amber-200 dark:border-amber-800 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20">
+              <HelpCircle className="w-4 h-4 text-amber-500" />
+              <AlertDescription className="text-amber-800 dark:text-amber-200">
+                <strong>Important Note:</strong> Some advanced features require a Pro or Enterprise subscription. Check your plan 
+                details to see which features are available to you.
+              </AlertDescription>
+            </Alert>
           </div>
           
           <div className="mt-12 pt-8 border-t border-slate-200 dark:border-slate-700">
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
               <p className="text-slate-600 dark:text-slate-400 font-medium">
                 Was this article helpful?
               </p>
               <div className="flex items-center gap-3">
-                <button className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all duration-200 shadow-lg hover:shadow-xl">
-                  <ThumbsUp className="w-4 h-4" />
-                  <span className="font-medium">Yes</span>
-                </button>
-                <button className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all duration-200">
-                  <ThumbsDown className="w-4 h-4" />
-                  <span className="font-medium">No</span>
-                </button>
+                <Button className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600">
+                  <ThumbsUp className="w-4 h-4 mr-2" />
+                  Yes
+                </Button>
+                <Button variant="outline">
+                  <ThumbsDown className="w-4 h-4 mr-2" />
+                  No
+                </Button>
               </div>
             </div>
             
-            <div className="bg-gradient-to-r from-slate-50 to-gray-50 dark:from-slate-800/50 dark:to-gray-800/50 rounded-2xl p-6">
-              <h4 className="font-bold text-slate-900 dark:text-white mb-3">Need more help?</h4>
-              <p className="text-slate-600 dark:text-slate-400 mb-4">
-                Our support team is here to help you succeed. Get in touch if you have any questions.
-              </p>
-              <button className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-semibold hover:gap-3 transition-all">
-                <MessageCircle className="w-4 h-4" />
-                <span>Contact Support</span>
-                <ArrowLeft className="w-4 h-4 rotate-180" />
-              </button>
-            </div>
+            <Card className="bg-gradient-to-r from-slate-50 to-gray-50 dark:from-slate-800/50 dark:to-gray-800/50 border-0">
+              <CardContent className="p-6">
+                <CardTitle className="text-lg font-bold text-slate-900 dark:text-white mb-3">
+                  Need more help?
+                </CardTitle>
+                <p className="text-slate-600 dark:text-slate-400 mb-4">
+                  Our support team is here to help you succeed. Get in touch if you have any questions.
+                </p>
+                <Button variant="ghost" className="text-blue-600 dark:text-blue-400 p-0 h-auto">
+                  <MessageCircle className="w-4 h-4 mr-2" />
+                  Contact Support
+                  <ArrowLeft className="w-4 h-4 ml-2 rotate-180" />
+                </Button>
+              </CardContent>
+            </Card>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 
   // Category view component
   const CategoryView = ({ category }: { category: Category }) => (
-    <div className="max-w-6xl mx-auto">
-      <button
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <Button
         onClick={handleBackToCategories}
-        className="flex items-center text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 mb-8 transition-colors group"
+        variant="ghost"
+        className="mb-8 hover:bg-slate-100 dark:hover:bg-slate-800"
       >
-        <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
+        <ArrowLeft className="w-4 h-4 mr-2" />
         Back to Help Center
-      </button>
+      </Button>
       
       <div className="mb-12">
-        <div className="flex items-center mb-6">
-          <div className={`w-16 h-16 bg-gradient-to-r ${category.color} rounded-2xl flex items-center justify-center mr-4 shadow-lg`}>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-6 mb-6">
+          <div className={`w-16 h-16 bg-gradient-to-r ${category.color} rounded-2xl flex items-center justify-center shadow-lg`}>
             <category.icon className="w-8 h-8 text-white" />
           </div>
           <div>
-            <h1 className="text-4xl lg:text-5xl font-bold text-slate-900 dark:text-white mb-2">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900 dark:text-white mb-2">
               {category.title}
             </h1>
-            <p className="text-xl text-slate-600 dark:text-slate-300">
+            <p className="text-lg sm:text-xl text-slate-600 dark:text-slate-300">
               {category.description}
             </p>
           </div>
@@ -382,47 +389,43 @@ const HelpCenter = () => {
       
       <div className="grid gap-6 lg:grid-cols-2">
         {category.articles.map((article) => (
-          <div
+          <Card
             key={article.id}
             onClick={() => handleArticleClick(article, category)}
-            className="group cursor-pointer"
+            className="cursor-pointer hover:shadow-xl transition-all duration-300 hover:-translate-y-1 bg-white/60 dark:bg-white/5 border-0"
           >
-            <div className="relative overflow-hidden rounded-2xl bg-white/60 dark:bg-white/5 shadow-lg hover:shadow-xl transition-all duration-300 group-hover:-translate-y-1">
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 to-purple-600/5 dark:from-blue-400/5 dark:to-purple-400/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-              
-              <div className="relative p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    {article.popular && (
-                      <span className="flex items-center gap-1 px-2 py-1 bg-gradient-to-r from-amber-400 to-orange-500 text-white text-xs font-bold rounded-full">
-                        <Star className="w-3 h-3" />
-                        POPULAR
-                      </span>
-                    )}
-                    <span className="flex items-center gap-1 text-sm text-slate-500 dark:text-slate-400">
-                      <Clock className="w-3 h-3" />
-                      {article.readTime}
-                    </span>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 group-hover:translate-x-1 transition-all" />
-                </div>
-                
-                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors leading-tight">
-                  {article.title}
-                </h3>
-                
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-500 dark:text-slate-400">
-                    Article #{article.id}
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  {article.popular && (
+                    <Badge className="bg-gradient-to-r from-amber-400 to-orange-500 text-white">
+                      <Star className="w-3 h-3 mr-1" />
+                      POPULAR
+                    </Badge>
+                  )}
+                  <span className="flex items-center gap-1 text-sm text-slate-500 dark:text-slate-400">
+                    <Clock className="w-3 h-3" />
+                    {article.readTime}
                   </span>
-                  <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-semibold group-hover:gap-3 transition-all">
-                    <span>Read Article</span>
-                    <ArrowLeft className="w-4 h-4 rotate-180 group-hover:translate-x-1 transition-transform" />
-                  </div>
+                </div>
+                <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300" />
+              </div>
+              
+              <CardTitle className="text-xl font-bold text-slate-900 dark:text-white mb-3 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors leading-tight">
+                {article.title}
+              </CardTitle>
+              
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-500 dark:text-slate-400">
+                  Article #{article.id}
+                </span>
+                <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-semibold">
+                  <span>Read Article</span>
+                  <ArrowLeft className="w-4 h-4 rotate-180" />
                 </div>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         ))}
       </div>
     </div>
@@ -442,43 +445,44 @@ const HelpCenter = () => {
                   <BookOpen className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+                  <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
                     Blutto Help Center
                   </h1>
-                  <p className="text-slate-600 dark:text-slate-400">
+                  <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400">
                     Get help and learn how to use our platform
                   </p>
                 </div>
               </div>
-              <button
+              <Button
                 onClick={() => setDarkMode(!darkMode)}
-                className="p-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all duration-200 shadow-lg"
+                variant="outline"
+                size="icon"
+                className="shadow-lg"
               >
-                {darkMode ? <Sun className="w-5 h-5 text-slate-600 dark:text-slate-300" /> : <Moon className="w-5 h-5 text-slate-600" />}
-              </button>
+                {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              </Button>
             </div>
           </div>
         </header>
 
-        <div className="container mx-auto px-4 py-16">
+        <div className="container mx-auto px-4 py-8 sm:py-16">
           {/* Search Bar */}
           <div className="max-w-2xl mx-auto relative mb-8">
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-purple-600/20 dark:from-blue-400/20 dark:to-purple-400/20 rounded-2xl blur-xl" />
-            <div className="relative bg-white/80 dark:bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 dark:border-white/10 shadow-xl">
-              <Search className="absolute left-6 top-1/2 transform -translate-y-1/2 text-slate-400 w-6 h-6" />
-              <input
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
+              <Input
                 type="text"
                 placeholder="Search for help articles, features, troubleshooting..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-16 pr-6 py-6 text-lg bg-transparent text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 rounded-2xl"
+                className="pl-12 pr-6 py-4 text-base sm:text-lg bg-white/80 dark:bg-white/10 backdrop-blur-md border-white/20 dark:border-white/10 shadow-xl"
               />
             </div>
           </div>
 
           {/* Search Results */}
           <div className="max-w-4xl mx-auto">
-            <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-8">
+            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-8">
               Search Results for "{searchQuery}"
             </h2>
             
@@ -493,34 +497,47 @@ const HelpCenter = () => {
             ) : (
               <div className="space-y-8">
                 {filteredCategories.map((category) => (
-                  <div key={category.id} className="bg-white/60 dark:bg-white/5 rounded-2xl p-6 shadow-lg">
-                    <div className="flex items-center mb-4">
-                      <div className={`w-12 h-12 bg-gradient-to-r ${category.color} rounded-xl flex items-center justify-center mr-4`}>
-                        <category.icon className="w-6 h-6 text-white" />
+                  <Card key={category.id} className="bg-white/60 dark:bg-white/5 border-0 shadow-lg">
+                    <CardHeader className="p-4 sm:p-6">
+                      <div className="flex items-center mb-4">
+                        <div className={`w-12 h-12 bg-gradient-to-r ${category.color} rounded-xl flex items-center justify-center mr-4`}>
+                          <category.icon className="w-6 h-6 text-white" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">
+                            {category.title}
+                          </CardTitle>
+                          <CardDescription className="text-slate-600 dark:text-slate-400">
+                            {category.description}
+                          </CardDescription>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="text-xl font-bold text-slate-900 dark:text-white">{category.title}</h3>
-                        <p className="text-slate-600 dark:text-slate-400">{category.description}</p>
+                    </CardHeader>
+                    <CardContent className="p-4 sm:p-6 pt-0">
+                      <div className="grid gap-4 md:grid-cols-2">
+                        {category.articles
+                          .filter(article => article.title.toLowerCase().includes(searchQuery.toLowerCase()))
+                          .map((article) => (
+                            <Button
+                              key={article.id}
+                              onClick={() => handleArticleClick(article, category)}
+                              variant="ghost"
+                              className="h-auto p-4 text-left justify-start bg-white/50 dark:bg-white/5 hover:bg-white/70 dark:hover:bg-white/10"
+                            >
+                              <div className="w-full">
+                                <h4 className="font-semibold text-slate-900 dark:text-white mb-2 text-left">
+                                  {article.title}
+                                </h4>
+                                <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                                  <Clock className="w-3 h-3" />
+                                  <span>{article.readTime}</span>
+                                </div>
+                              </div>
+                            </Button>
+                          ))}
                       </div>
-                    </div>
-                    <div className="grid gap-4 md:grid-cols-2">
-                      {category.articles
-                        .filter(article => article.title.toLowerCase().includes(searchQuery.toLowerCase()))
-                        .map((article) => (
-                          <button
-                            key={article.id}
-                            onClick={() => handleArticleClick(article, category)}
-                            className="text-left p-4 bg-white/50 dark:bg-white/5 rounded-xl hover:bg-white/70 dark:hover:bg-white/10 transition-all"
-                          >
-                            <h4 className="font-semibold text-slate-900 dark:text-white mb-2">{article.title}</h4>
-                            <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-                              <Clock className="w-3 h-3" />
-                              <span>{article.readTime}</span>
-                            </div>
-                          </button>
-                        ))}
-                    </div>
-                  </div>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
             )}
@@ -534,7 +551,7 @@ const HelpCenter = () => {
   if (selectedArticle) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-[#FFFFFF] to-[#D2DCFF] dark:bg-gradient-to-br dark:from-gray-950 dark:via-black dark:to-gray-900">
-        <div className="container mx-auto px-4 py-8">
+        <div className="container mx-auto py-8">
           <ArticleContent article={selectedArticle} />
         </div>
       </div>
@@ -544,13 +561,12 @@ const HelpCenter = () => {
   if (selectedCategory) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-[#FFFFFF] to-[#D2DCFF] dark:bg-gradient-to-br dark:from-gray-950 dark:via-black dark:to-gray-900">
-        <div className="container mx-auto px-4 py-8">
+        <div className="container mx-auto py-8">
           <CategoryView category={selectedCategory} />
         </div>
       </div>
     );
   }
-
   return (
     <div className="min-h-screen bg-gradient-to-b pt-20 from-[#FFFFFF] to-[#D2DCFF] dark:bg-gradient-to-br dark:from-gray-950 dark:via-black dark:to-gray-900">
       {/* Header */}

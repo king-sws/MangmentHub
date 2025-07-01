@@ -478,7 +478,7 @@ export default function BlogPostPage({ params }: BlogPostPageProps) {
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#FFFFFF] to-[#D2DCFF] dark:bg-gradient-to-br dark:from-gray-950 dark:via-black dark:to-gray-900">
       {/* Header */}
-      <header className="bg-white/80 dark:bg-slate-900/80  border-b border-slate-200 dark:border-slate-700 sticky top-0 z-50">
+      <header className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-3xl border-b border-slate-200 dark:border-slate-700 sticky top-0 z-50">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <Link 
