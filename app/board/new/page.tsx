@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
-import useSafeSearchParams from '@/hooks/useSafeSearchParams';
+import { useSearchParams } from "next/navigation";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -33,14 +33,30 @@ interface WorkspaceData {
   };
 }
 
-export default function CreateBoardPage() {
+// Loading component for Suspense fallback
+function LoadingSpinner() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 dark:from-background dark:via-background dark:to-muted/10">
+      <div className="w-full max-w-4xl mx-auto p-4 sm:p-6 md:p-8">
+        <div className="flex items-center justify-center py-16">
+          <div className="text-center space-y-4">
+            <div className="w-12 h-12 mx-auto border-4 border-transparent border-t-blue-600 dark:border-t-blue-400 rounded-full animate-spin"></div>
+            <p className="text-muted-foreground">Loading create board page...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CreateBoardContent() {
   const [title, setTitle] = useState('');
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [workspaces, setWorkspaces] = useState<WorkspaceData[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const router = useRouter();
-  const searchParams = useSafeSearchParams();
+  const searchParams = useSearchParams();
   const { data: session } = useSession();
 
   // Pre-select workspace from URL params if provided
@@ -371,5 +387,13 @@ export default function CreateBoardPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CreateBoardPage() {
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <CreateBoardContent />
+    </Suspense>
   );
 }
