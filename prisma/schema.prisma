@@ -116,21 +116,20 @@ model List {
 }
 
 model Card {
-  id          String      @id @default(cuid())
+  id          String         @id @default(cuid())
   title       String
-  description String?     @db.Text
+  description String?        @db.Text
   listId      String
-  list        List        @relation(fields: [listId], references: [id], onDelete: Cascade)
-  order       Int         @default(0)
+  list        List           @relation(fields: [listId], references: [id], onDelete: Cascade)
+  order       Int            @default(0)
   dueDate     DateTime?
-  completed   Boolean     @default(false)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime?   @updatedAt
+  completed   Boolean        @default(false)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime?      @updatedAt
   completedAt DateTime?
-
-  status      CardStatus  @default(TODO)
-  assignees   User[]      @relation("CardAssignees")
-  priority    PriorityLevel @default(MEDIUM)
+  status      CardStatus     @default(TODO)
+  assignees   User[]         @relation("CardAssignees")
+  priority    PriorityLevel? // Made optional by adding ?
 }
 
 enum PriorityLevel {
@@ -139,7 +138,6 @@ enum PriorityLevel {
   HIGH
   URGENT
 }
-
 
 model WorkspaceMember {
   id          String    @id @default(cuid())

@@ -18,7 +18,7 @@ import { SignInWithCredentials } from "@/actions/action";
 
 const LoginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
-  password: z.string().min(8, { message: "Password must be at least 8 characters" }),
+  password: z.string().min(1, { message: "Password must be at least 8 characters" }),
 });
 
 const brandMessages = [

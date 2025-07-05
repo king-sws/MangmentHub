@@ -4,6 +4,7 @@ import Check from "@/public/check.svg";
 import clsx from "clsx";
 import { motion } from "framer-motion";
 import Image from "next/image";
+import Link from "next/link";
 
 const pricingTiers = [
   {
@@ -17,6 +18,10 @@ const pricingTiers = [
       "3 Boards per workspace",
       "3 Members per workspace",
       "Basic task management",
+      "Kanban view",
+      "Real-time collaboration",
+      "Limited file attachments",
+      "Email support",
     ],
   },
   {
@@ -30,8 +35,14 @@ const pricingTiers = [
       "10 Boards per workspace",
       "10 Members per workspace",
       "Advanced task management",
-      "Calendar view",
+      "Calendar & List views",
       "Due date reminders",
+      "Task priority & labels",
+      "Recurring tasks",
+      "Commenting & mentions",
+      "Integrations (Google Calendar, Slack)",
+      "File attachments (up to 100MB)",
+      "Standard support",
     ],
   },
   {
@@ -41,16 +52,24 @@ const pricingTiers = [
     popular: false,
     inverse: false,
     features: [
-      "Unlimited workspaces",
-      "Unlimited boards",
+      "Unlimited workspaces & boards",
       "Up to 50 members per workspace",
-      "All PRO features",
-      "Admin controls",
+      "All Pro features included",
+      "Advanced permissions & roles",
+      "Admin controls & audit logs",
       "Analytics dashboard",
+      "Custom fields & automation",
+      "SSO & 2FA security",
+      "Integrations (Google Calendar, Slack)",
       "Priority support",
+      "File attachments (up to 500MB)",
+      "Unlimited file attachments",
+      "Priority support",
+      "Dedicated onboarding",
     ],
   },
 ];
+
 
 export const Pricing = () => {
   return (
@@ -111,16 +130,18 @@ export const Pricing = () => {
                 </span>
               </div>
 
-              <button
-                className={clsx(
-                  "w-full mt-6 py-3 rounded-xl font-medium transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98]",
-                  items.inverse
-                    ? "text-white bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 shadow-lg hover:shadow-emerald-500/25"
-                    : "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white hover:from-violet-500 hover:to-fuchsia-500 dark:from-violet-500 dark:to-fuchsia-500 dark:hover:from-violet-400 dark:hover:to-fuchsia-400 shadow-lg hover:shadow-violet-500/25"
-                )}
-              >
-                {items.buttonText}
-              </button>
+              <Link href="/sign-up">
+                <button
+                  className={clsx(
+                    "w-full mt-6 py-3 rounded-xl font-medium transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98]",
+                    items.inverse
+                      ? "text-white bg-gradient-to-r from-white/20 to-white/10 hover:from-white/30 hover:to-white/20 border border-white/20 backdrop-blur-sm shadow-lg"
+                      : "bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-100 shadow-lg"
+                  )}
+                >
+                  {items.buttonText}
+                </button>
+              </Link>
 
               <ul className="mt-6 space-y-4">
                 {items.features.map((feature) => (

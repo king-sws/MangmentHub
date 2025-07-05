@@ -4,7 +4,7 @@ import { Metadata } from "next";
 import { AnalyticsView } from "./_components/analytics-view";
 
 export const metadata: Metadata = {
-  title: "Analytics | ManageHub",
+  title: "Analytics | Blutto",
   description: "View insights and statistics about your workspaces and tasks"
 };
 

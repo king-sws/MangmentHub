@@ -174,7 +174,7 @@ export default async function DashboardPage({ params }: { params: { userId: stri
 
   return (
     <div className="min-h-screen font-sans  ">
-      <div className="w-full max-w-7xl mx-auto p-4 sm:p-6 md:p-8 space-y-12">
+      <div className="w-full max-w-7xl mx-auto p-2 sm:p-6 md:p-8 space-y-12">
         {/* Welcome header */}
         <div className="w-full">
           <div className="bg-gradient-to-r from-indigo-50 to-indigo-100 dark:from-indigo-950/30 dark:to-indigo-900/20 border border-indigo-200/50 dark:border-indigo-800/30 rounded-2xl shadow-xl overflow-hidden">
@@ -235,7 +235,7 @@ export default async function DashboardPage({ params }: { params: { userId: stri
           </div>
         </div>
 
-        <div className="flex flex-row sm:flex-row items-start sm:items-center gap-2 text-sm text-muted-foreground ">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 text-sm text-muted-foreground ">
           <Badge variant="outline" className="border-primary/30 bg-primary/10 dark:text-indigo-300 dark:bg-primary/900/40">
             {effectivePlan} Plan
           </Badge>
@@ -535,20 +535,56 @@ export default async function DashboardPage({ params }: { params: { userId: stri
             </div>
 
             {/* Feature highlights - More compact */}
-            <div className="grid grid-cols-3 gap-3 pt-6">
-              {[
-                { icon: LayoutDashboard, label: 'Kanban', color: 'blue' },
-                { icon: Users, label: 'Teams', color: 'green' },
-                { icon: Award, label: 'Progress', color: 'amber' }
-              ].map(({ icon: Icon, label, color }) => (
-                <div key={label} className={`text-center p-3 rounded-lg bg-gradient-to-br from-${color}-50 to-${color}-100 dark:from-${color}-900/20 dark:to-${color}-800/20 border border-${color}-200/50 dark:border-${color}-700/30`}>
-                  <div className={`w-6 h-6 bg-${color}-500 rounded-lg flex items-center justify-center mx-auto mb-2`}>
-                    <Icon className="h-3 w-3 text-white" />
-                  </div>
-                  <p className={`text-xs font-medium text-${color}-700 dark:text-${color}-300`}>{label}</p>
-                </div>
-              ))}
-            </div>
+            <div className="pt-6">
+  {/* First row - first two items */}
+  <div className="flex justify-between gap-3">
+    {[
+      { icon: LayoutDashboard, label: 'Kanban', color: 'blue' },
+      { icon: Users, label: 'Teams', color: 'green' },
+    ].map(({ icon: Icon, label, color }) => (
+      <div 
+        key={label} 
+        className={`flex-1 min-w-[calc(50%-0.75rem)] max-w-[calc(50%-0.75rem)]
+          text-center p-3 rounded-lg 
+          bg-gradient-to-br 
+          from-${color}-50 to-${color}-100 
+          dark:from-${color}-900/20 dark:to-${color}-800/20 
+          border border-${color}-200/50 dark:border-${color}-700/30`}
+      >
+        <div className={`w-6 h-6 bg-${color}-500 rounded-lg flex items-center justify-center mx-auto mb-2`}>
+          <Icon className="h-3 w-3 text-white" />
+        </div>
+        <p className={`text-xs font-medium text-${color}-700 dark:text-${color}-300`}>
+          {label}
+        </p>
+      </div>
+    ))}
+  </div>
+  
+  {/* Second row - centered third item */}
+  <div className="flex justify-center mt-3">
+    {(() => {
+      const { icon: Icon, label, color } = { icon: Award, label: 'Progress', color: 'amber' };
+      return (
+        <div 
+          className={`min-w-[calc(50%-0.75rem)] max-w-[calc(50%-0.75rem)]
+            text-center p-3 rounded-lg 
+            bg-gradient-to-br 
+            from-${color}-50 to-${color}-100 
+            dark:from-${color}-900/20 dark:to-${color}-800/20 
+            border border-${color}-200/50 dark:border-${color}-700/30`}
+        >
+          <div className={`w-6 h-6 bg-${color}-500 rounded-lg flex items-center justify-center mx-auto mb-2`}>
+            <Icon className="h-3 w-3 text-white" />
+          </div>
+          <p className={`text-xs font-medium text-${color}-700 dark:text-${color}-300`}>
+            {label}
+          </p>
+        </div>
+      );
+    })()}
+  </div>
+</div>
           </div>
         </div>
       </div>
@@ -855,92 +891,98 @@ export default async function DashboardPage({ params }: { params: { userId: stri
           
           {/* Tasks tab content */}
           <TabsContent value="tasks" className="mt-0">
-            <Card 
-              className="w-full border-none rounded-2xl shadow-2xl 
-                         bg-white dark:bg-neutral-900 
-                         ring-1 ring-gray-100 dark:ring-neutral-800 
-                         transition-all duration-300 
-                         hover:shadow-3xl hover:ring-gray-200 
-                         dark:hover:ring-neutral-700"
-            >
-              <CardHeader className="px-6 pt-6 pb-4 border-b border-gray-100 dark:border-neutral-800">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <CardTitle 
-                      className="text-2xl font-semibold 
-                                 text-gray-800 dark:text-neutral-100 
-                                 flex items-center gap-3"
-                    >
-                      <Calendar className="w-6 h-6 text-indigo-500 dark:text-indigo-400" />
-                      Your Tasks
-                    </CardTitle>
-                    <CardDescription 
-                      className="text-gray-500 dark:text-indigo-400 
-                                 text-sm font-normal"
-                    >
-                      Manage and track your upcoming tasks
-                    </CardDescription>
-                  </div>
-                  <Button 
-                    variant="outline" 
-                    className="px-4 py-2 rounded-lg 
-                               border-indigo-200 dark:border-indigo-700
-                               text-indigo-700 dark:text-indigo-300
-                               hover:bg-indigo-50 dark:hover:bg-indigo-800 
-                               transition-colors duration-200 
-                               flex items-center gap-2"
-                  >
-                    <PlusCircle className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                    Add Task
-                  </Button>
-                </div>
-              </CardHeader>
-              
-              <CardContent className="p-0">
-                <Suspense 
-                  fallback={
-                    <div className="flex items-center justify-center py-16">
-                      <div className="text-center space-y-4">
-                        <div 
-                          className="w-12 h-12 mx-auto 
-                                     border-4 border-transparent 
-                                     border-t-indigo-600 dark:border-t-indigo-400 
-                                     rounded-full animate-spin"
-                        ></div>
-                        <p className="text-gray-500 dark:text-neutral-400 text-sm">
-                          Loading your tasks...
-                        </p>
-                      </div>
-                    </div>
-                  }
-                >
-                  <TasksTableMini userId={session.user.id} limit={5} />
-                </Suspense>
-              </CardContent>
-              
-              <CardFooter className="p-6 pt-4 border-t border-gray-100 dark:border-neutral-800">
-                <Button 
-                  asChild 
-                  className="w-full rounded-lg 
-                             bg-indigo-600 dark:bg-indigo-500 
-                             text-white 
-                             hover:bg-indigo-700 dark:hover:bg-indigo-600
-                             focus:ring-4 focus:ring-indigo-200 dark:focus:ring-indigo-700/30
-                             transition-all duration-300 
-                             flex items-center justify-center gap-2 
-                             group"
-                >
-                  <Link href={`/dashboard/${session.user.id}/tasks`}>
-                    View all tasks
-                    <ArrowRight 
-                      className="w-4 h-4 transition-transform 
-                                 group-hover:translate-x-1" 
-                    />
-                  </Link>
-                </Button>
-              </CardFooter>
-            </Card>
-          </TabsContent>
+  <Card 
+    className="w-full border-none rounded-xl shadow-sm 
+               bg-white dark:bg-gray-950 
+               ring-1 ring-gray-950/5 dark:ring-white/10 
+               transition-all duration-200 
+               hover:shadow-md hover:ring-gray-950/10 
+               dark:hover:ring-white/20"
+  >
+    <CardHeader className="px-6 pt-6 pb-4 border-b border-gray-950/5 dark:border-white/10">
+      <div className="flex items-center justify-between">
+        <div className="space-y-1">
+          <CardTitle 
+            className="text-xl font-semibold tracking-tight
+                       text-gray-900 dark:text-white 
+                       flex items-center gap-3"
+          >
+            <div className="p-1.5 rounded-lg bg-blue-50 dark:bg-blue-500/10">
+              <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            </div>
+            Your Tasks
+          </CardTitle>
+          <CardDescription 
+            className="text-gray-600 dark:text-gray-400 
+                       text-sm leading-relaxed"
+          >
+            Manage and track your upcoming tasks
+          </CardDescription>
+        </div>
+        <Button 
+          variant="outline" 
+          size="sm"
+          className="px-3 py-1.5 rounded-lg 
+                     border-gray-950/10 dark:border-white/10
+                     text-gray-700 dark:text-gray-300
+                     hover:bg-gray-50 dark:hover:bg-gray-800
+                     hover:border-gray-950/20 dark:hover:border-white/20
+                     transition-all duration-200 
+                     flex items-center gap-2
+                     font-medium text-sm"
+        >
+          <PlusCircle className="w-4 h-4" />
+          Add Task
+        </Button>
+      </div>
+    </CardHeader>
+    
+    <CardContent className="p-0">
+      <Suspense 
+        fallback={
+          <div className="flex items-center justify-center py-16">
+            <div className="text-center space-y-4">
+              <div 
+                className="w-8 h-8 mx-auto 
+                           border-2 border-transparent 
+                           border-t-gray-300 dark:border-t-gray-600 
+                           rounded-full animate-spin"
+              ></div>
+              <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">
+                Loading your tasks...
+              </p>
+            </div>
+          </div>
+        }
+      >
+        <TasksTableMini userId={session.user.id} limit={5} />
+      </Suspense>
+    </CardContent>
+    
+    <CardFooter className="p-6 pt-4 border-t border-gray-950/5 dark:border-white/10">
+      <Button 
+        asChild 
+        className="w-full rounded-lg h-9
+                   bg-gray-900 dark:bg-white 
+                   text-white dark:text-gray-900
+                   hover:bg-gray-800 dark:hover:bg-gray-100
+                   focus:ring-2 focus:ring-gray-950/20 dark:focus:ring-white/20
+                   transition-all duration-200 
+                   flex items-center justify-center gap-2 
+                   group font-medium text-sm
+                   shadow-sm"
+      >
+        <Link href={`/dashboard/${session.user.id}/tasks`}>
+          View all tasks
+          <ArrowRight 
+            className="w-4 h-4 transition-transform duration-200
+                       group-hover:translate-x-0.5" 
+          />
+        </Link>
+      </Button>
+    </CardFooter>
+  </Card>
+</TabsContent>
         </Tabs>
       </div>
     </div>

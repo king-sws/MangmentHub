@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { Button } from '@/components/ui/button'
 import { Menu, X, ChevronDown, Star, Zap, Shield, Users, Book, MessageCircle, FileText, Headphones } from 'lucide-react'
@@ -133,21 +133,20 @@ const Navbar: React.FC = () => {
               >
                 <div className="relative">
                   <Image 
-                        src="/blutto-no.svg" 
-                        alt="Blutto Logo" 
-                        width={78} 
-                        height={78}
-                        className="dark:hidden" // Hide in dark mode
-                      />
-                      <Image 
-                        src="/blutto-white-no.svg" 
-                        alt="Blutto Logo" 
-                        width={78} 
-                        height={78}
-                        className="hidden dark:block" // Show only in dark mode
-                      />
+                    src="/blutto-no.svg" 
+                    alt="Blutto Logo" 
+                    width={78} 
+                    height={78}
+                    className="dark:hidden" // Hide in dark mode
+                  />
+                  <Image 
+                    src="/blutto-white-no.svg" 
+                    alt="Blutto Logo" 
+                    width={78} 
+                    height={78}
+                    className="hidden dark:block" // Show only in dark mode
+                  />
                 </div>
-                
               </Link>
             </div>
             
@@ -246,10 +245,11 @@ const Navbar: React.FC = () => {
                   </Link>
                 </Button>
                 
+                {/* UPDATED BUTTON WITH MATCHING GRADIENT */}
                 <Button 
                   asChild
                   size="lg"
-                  className="group px-10 py-4 bg-gradient-to-b from-[#1e40af] to-[#3b82f6] dark:bg-white text-white dark:text-white hover:from-[#1d4ed8] hover:to-[#2563eb] dark:hover:bg-gray-100 font-semibold text-base transition duration-300 shadow-md hover:shadow-lg"
+                  className="group px-10 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 font-semibold text-base transition duration-300 shadow-md hover:shadow-lg"
                 >
                   <Link href="/sign-up" className="flex items-center gap-2">
                     Start Free Trial
@@ -307,19 +307,19 @@ const Navbar: React.FC = () => {
           {/* Mobile Menu Header */}
           <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-800">
             <Image 
-      src="/blutto-no.svg" 
-      alt="Blutto Logo" 
-      width={78} 
-      height={78}
-      className="dark:hidden" // Hide in dark mode
-    />
-    <Image 
-      src="/blutto-white-no.svg" 
-      alt="Blutto Logo" 
-      width={78} 
-      height={78}
-      className="hidden dark:block" // Show only in dark mode
-    />
+              src="/blutto-no.svg" 
+              alt="Blutto Logo" 
+              width={78} 
+              height={78}
+              className="dark:hidden"
+            />
+            <Image 
+              src="/blutto-white-no.svg" 
+              alt="Blutto Logo" 
+              width={78} 
+              height={78}
+              className="hidden dark:block"
+            />
             <Button
               variant="ghost"
               size="icon"
@@ -406,9 +406,10 @@ const Navbar: React.FC = () => {
               </Link>
             </Button>
             
+            {/* UPDATED BUTTON WITH MATCHING GRADIENT */}
             <Button 
               asChild 
-              className="w-full font-medium bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg"
+              className="w-full font-medium bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg hover:from-blue-700 hover:to-purple-700"
             >
               <Link href="/sign-up" onClick={toggleMenu}>
                 Start Free Trial

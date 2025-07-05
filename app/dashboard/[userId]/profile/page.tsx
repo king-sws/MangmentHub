@@ -9,7 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { Card, CardContent } from "@/components/ui/card";
 
 export const metadata: Metadata = {
-  title: "Profile",
+  title: "Profile | Blutto",
   description: "Manage your profile and account settings",
 };
 

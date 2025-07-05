@@ -52,23 +52,30 @@ const TrustBadges = () => (
   >
     {[
       {
-        icon: <div className="flex gap-1">{Array(5).fill(null).map((_, i) => (
-          <Star key={i} className="w-3 h-3 fill-amber-400 text-amber-400" />
+        icon: <div className="flex gap-0.5">{Array(5).fill(null).map((_, i) => (
+          <Star key={i} className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
         ))}</div>,
         text: "4.9/5 from 10,000+ reviews"
       },
       {
-        icon: <Check className="h-3 w-3 text-green-600 dark:text-green-500" />,
+        icon: <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />,
         text: "SOC 2 Type II Certified"
       },
       {
-        icon: <Sparkles className="h-3 w-3 text-[#010D3E] dark:text-gray-400" />,
+        icon: <Sparkles className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />,
         text: "Trusted by Fortune 500 teams"
       }
     ].map((item, idx) => (
-      <div key={idx} className="flex items-center gap-2 px-4 py-2 bg-white/80 dark:bg-gray-900/70 backdrop-blur-sm border border-gray-200/60 dark:border-gray-700/50 rounded-full shadow-sm">
+      <div 
+        key={idx} 
+        className={`text-sm border border-slate-200/60 dark:border-slate-700/40 flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-200 hover:border-slate-300/60 dark:hover:border-slate-600/50 ${
+          idx < 2 ? 'hidden lg:flex' : ''
+        }`}
+      >
         {item.icon}
-        <span className="text-xs font-medium text-[#010D3E] dark:text-gray-300">{item.text}</span>
+        <span className="font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap">
+          {item.text}
+        </span>
       </div>
     ))}
   </motion.div>

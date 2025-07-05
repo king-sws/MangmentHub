@@ -117,7 +117,7 @@ export function ProfileContent({ user, canViewFullProfile }: ProfileContentProps
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
             {/* Avatar Section */}
             <div className="relative">
-              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden border-2 border-border bg-muted">
+              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden border-2 border-border bg-muted">
                 <Avatar className="w-full h-full">
                   <AvatarImage 
                     src={user.image ?? undefined} 

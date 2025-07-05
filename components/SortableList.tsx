@@ -354,7 +354,7 @@ export const SortableList = memo(forwardRef<HTMLDivElement, SortableListProps>((
   );
 
   const contentClasses = generateClassNames(
-    "p-2 space-y-2 overflow-y-auto scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-gray-300 dark:scrollbar-track-gray-800 dark:scrollbar-thumb-gray-600",
+    "p-2 space-y-2 overflow-y-auto custom-scrollbar scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-gray-300 dark:scrollbar-track-gray-800 dark:scrollbar-thumb-gray-600",
     {
       "hover:scrollbar-thumb-gray-400 dark:hover:scrollbar-thumb-gray-500": !isDragging,
     },

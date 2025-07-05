@@ -25,7 +25,6 @@ import {
   CheckCircle2,
   Clock,
   AlertCircle,
-  
   RefreshCw
 } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
@@ -96,57 +95,56 @@ export function TasksTable({ userId }: TasksTableProps) {
     updateFilters({ dueDate: date });
   };
 
+  const handleCompleteTask = async (taskId: string, completed: boolean) => {
+    try {
+      // Get the current task to preserve other properties
+      const currentTask = tasks?.find(task => task.id === taskId);
+      if (!currentTask) return;
 
-const handleCompleteTask = async (taskId: string, completed: boolean) => {
-  try {
-    // Get the current task to preserve other properties
-    const currentTask = tasks?.find(task => task.id === taskId);
-    if (!currentTask) return;
-
-    // Determine the new status based on completion
-    const newStatus = completed ? "DONE" : (currentTask.status === "DONE" ? "TODO" : currentTask.status);
-    
-    // Optimistic update - update UI immediately
-    updateTaskInState(taskId, { 
-      completed, 
-      status: newStatus
-    });
-    
-    const response = await fetch(`/api/tasks/${taskId}`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ 
-        completed,
-        status: newStatus
-      }),
-    });
-    
-    if (!response.ok) {
-      // Revert optimistic update on error
+      // Determine the new status based on completion
+      const newStatus = completed ? "DONE" : (currentTask.status === "DONE" ? "TODO" : currentTask.status);
+      
+      // Optimistic update - update UI immediately
       updateTaskInState(taskId, { 
-        completed: currentTask.completed, 
-        status: currentTask.status
+        completed, 
+        status: newStatus
       });
-      throw new Error("Failed to update task");
+      
+      const response = await fetch(`/api/tasks/${taskId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ 
+          completed,
+          status: newStatus
+        }),
+      });
+      
+      if (!response.ok) {
+        // Revert optimistic update on error
+        updateTaskInState(taskId, { 
+          completed: currentTask.completed, 
+          status: currentTask.status
+        });
+        throw new Error("Failed to update task");
+      }
+      
+      // Get the actual response and update with server data
+      const updatedTask = await response.json();
+      updateTaskInState(taskId, {
+        completed: updatedTask.completed,
+        status: updatedTask.status,
+        // Include any other fields that might have been updated by the server
+        ...updatedTask
+      });
+      
+    } catch (error) {
+      console.error("Failed to update task:", error);
+      // Optionally show a toast notification to the user
+      // toast.error("Failed to update task. Please try again.");
     }
-    
-    // Get the actual response and update with server data
-    const updatedTask = await response.json();
-    updateTaskInState(taskId, {
-      completed: updatedTask.completed,
-      status: updatedTask.status,
-      // Include any other fields that might have been updated by the server
-      ...updatedTask
-    });
-    
-  } catch (error) {
-    console.error("Failed to update task:", error);
-    // Optionally show a toast notification to the user
-    // toast.error("Failed to update task. Please try again.");
-  }
-};
+  };
 
   const handleBulkAction = async (action: 'complete' | 'archive' | 'delete') => {
     // Implement bulk actions
@@ -175,7 +173,7 @@ const handleCompleteTask = async (taskId: string, completed: boolean) => {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-96 bg-card rounded-lg border">
+      <div className="flex justify-center items-center h-96 bg-card rounded-lg border mx-2 sm:mx-0">
         <div className="flex flex-col items-center gap-3">
           <div className="relative">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -192,8 +190,8 @@ const handleCompleteTask = async (taskId: string, completed: boolean) => {
 
   if (error || !tasks) {
     return (
-      <div className="text-center py-12 bg-card rounded-lg border">
-        <div className="mx-auto max-w-md">
+      <div className="text-center py-12 bg-card rounded-lg border mx-2 sm:mx-0">
+        <div className="mx-auto max-w-md px-4">
           <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
           <h3 className="text-lg font-semibold mb-2">Unable to load tasks</h3>
           <p className="text-muted-foreground mb-6">
@@ -259,52 +257,52 @@ const handleCompleteTask = async (taskId: string, completed: boolean) => {
                           searchQuery;
 
   return (
-    <div className="space-y-6">
-      {/* Enhanced Header with Stats */}
-      <div className="bg-card rounded-lg border p-6">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-          <div className="space-y-1">
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold tracking-tight">Tasks</h1>
+    <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
+      {/* Enhanced Header with Stats - Mobile Responsive */}
+      <div className="bg-card rounded-lg border p-4 sm:p-6">
+        <div className="space-y-4 sm:space-y-6">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Tasks</h1>
               <Badge variant="secondary" className="text-xs">
                 {filteredTasks.length} of {tasks.length}
               </Badge>
             </div>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               Manage and track your tasks across all projects
             </p>
           </div>
 
-          {/* Task Statistics */}
-          <div className="flex flex-wrap gap-4">
-            <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
-              <CheckCircle2 className="h-4 w-4 text-blue-600" />
-              <div className="text-sm">
+          {/* Task Statistics - Mobile Responsive Grid */}
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-4">
+            <div className="flex items-center gap-2 px-2 sm:px-3 py-2 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
+              <CheckCircle2 className="h-4 w-4 text-blue-600 flex-shrink-0" />
+              <div className="text-sm min-w-0">
                 <div className="font-medium text-blue-900 dark:text-blue-100">
                   {stats.completed}
                 </div>
-                <div className="text-xs text-blue-600 dark:text-blue-400">Completed</div>
+                <div className="text-xs text-blue-600 dark:text-blue-400 truncate">Completed</div>
               </div>
             </div>
             
-            <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 dark:bg-amber-950/30 rounded-lg">
-              <Clock className="h-4 w-4 text-amber-600" />
-              <div className="text-sm">
+            <div className="flex items-center gap-2 px-2 sm:px-3 py-2 bg-amber-50 dark:bg-amber-950/30 rounded-lg">
+              <Clock className="h-4 w-4 text-amber-600 flex-shrink-0" />
+              <div className="text-sm min-w-0">
                 <div className="font-medium text-amber-900 dark:text-amber-100">
                   {stats.pending}
                 </div>
-                <div className="text-xs text-amber-600 dark:text-amber-400">Pending</div>
+                <div className="text-xs text-amber-600 dark:text-amber-400 truncate">Pending</div>
               </div>
             </div>
             
             {stats.overdue > 0 && (
-              <div className="flex items-center gap-2 px-3 py-2 bg-red-50 dark:bg-red-950/30 rounded-lg">
-                <AlertCircle className="h-4 w-4 text-red-600" />
-                <div className="text-sm">
+              <div className="flex items-center gap-2 px-2 sm:px-3 py-2 bg-red-50 dark:bg-red-950/30 rounded-lg col-span-2 sm:col-span-1">
+                <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0" />
+                <div className="text-sm min-w-0">
                   <div className="font-medium text-red-900 dark:text-red-100">
                     {stats.overdue}
                   </div>
-                  <div className="text-xs text-red-600 dark:text-red-400">Overdue</div>
+                  <div className="text-xs text-red-600 dark:text-red-400 truncate">Overdue</div>
                 </div>
               </div>
             )}
@@ -312,86 +310,289 @@ const handleCompleteTask = async (taskId: string, completed: boolean) => {
         </div>
       </div>
 
-      {/* Enhanced Search and Actions Bar */}
-      <div className="bg-card rounded-lg border p-4">
-        <div className="flex flex-col sm:flex-row gap-4">
-          {/* Search */}
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search tasks..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
+      {/* Enhanced Search and Actions Bar - Mobile Responsive */}
+      <div className="bg-card rounded-lg border p-3 sm:p-4">
+        <div className="space-y-3 sm:space-y-4">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+            {/* Search */}
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search tasks..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setShowFilters(!showFilters)}
+                className={cn(
+                  "gap-2 flex-1 sm:flex-none",
+                  hasActiveFilters && "border-primary text-primary"
+                )}
+              >
+                <Filter className="h-4 w-4" />
+                <span className="sm:inline">Filters</span>
+                {hasActiveFilters && (
+                  <Badge variant="secondary" className="h-5 w-5 rounded-full p-0 text-xs">
+                    {selectedStatuses.length + selectedProjects.length + (dueDate ? 1 : 0) + (searchQuery ? 1 : 0)}
+                  </Badge>
+                )}
+              </Button>
+              
+              <Button 
+                onClick={() => setIsNewTaskDialogOpen(true)} 
+                size="sm"
+                className="gap-2 flex-1 sm:flex-none"
+              >
+                <Plus className="h-4 w-4" />
+                <span className="sm:inline">New</span>
+              </Button>
+            </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex items-center gap-2">
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => setShowFilters(!showFilters)}
-              className={cn(
-                "gap-2",
-                hasActiveFilters && "border-primary text-primary"
-              )}
-            >
-              <Filter className="h-4 w-4" />
-              Filters
+          {/* Collapsible Filters */}
+          {showFilters && (
+            <div className="pt-3 sm:pt-4 border-t">
+              <TasksTableFilters
+                statuses={uniqueStatuses}
+                assignees={[]}
+                projects={uniqueProjects}
+                selectedStatuses={selectedStatuses}
+                selectedAssignees={[]}
+                selectedProjects={selectedProjects}
+                dueDate={dueDate}
+                onStatusChange={handleStatusChange}
+                onAssigneeChange={() => {}}
+                onProjectChange={handleProjectChange}
+                onDueDateChange={handleDueDateChange}
+              />
+              
               {hasActiveFilters && (
-                <Badge variant="secondary" className="h-5 w-5 rounded-full p-0 text-xs">
-                  {selectedStatuses.length + selectedProjects.length + (dueDate ? 1 : 0) + (searchQuery ? 1 : 0)}
-                </Badge>
+                <div className="mt-3 flex justify-between items-center">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={clearAllFilters}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    Clear all filters
+                  </Button>
+                </div>
               )}
-            </Button>
-            
-            <Button 
-              onClick={() => setIsNewTaskDialogOpen(true)} 
-              size="sm"
-              className="gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              New Task
-            </Button>
-          </div>
+            </div>
+          )}
         </div>
-
-        {/* Collapsible Filters */}
-        {showFilters && (
-          <div className="mt-4 pt-4 border-t">
-            <TasksTableFilters
-              statuses={uniqueStatuses}
-              assignees={[]}
-              projects={uniqueProjects}
-              selectedStatuses={selectedStatuses}
-              selectedAssignees={[]}
-              selectedProjects={selectedProjects}
-              dueDate={dueDate}
-              onStatusChange={handleStatusChange}
-              onAssigneeChange={() => {}}
-              onProjectChange={handleProjectChange}
-              onDueDateChange={handleDueDateChange}
-            />
-            
-            {hasActiveFilters && (
-              <div className="mt-3 flex justify-between items-center">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={clearAllFilters}
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  Clear all filters
-                </Button>
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
-      {/* Enhanced Table */}
-      <div className="bg-card rounded-lg border shadow-sm overflow-hidden">
+      {/* Mobile Card View for Small Screens */}
+      <div className="block sm:hidden">
+        {selectedTaskIds.length > 0 && (
+          <div className="bg-card rounded-lg border p-3 mb-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  checked={selectedTaskIds.length === currentTasks.length}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      setSelectedTaskIds(currentTasks.map(t => t.id));
+                    } else {
+                      setSelectedTaskIds([]);
+                    }
+                  }}
+                />
+                <span className="text-sm font-medium">
+                  {selectedTaskIds.length} selected
+                </span>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => handleBulkAction('complete')}
+                >
+                  Complete
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => handleBulkAction('archive')}
+                >
+                  Archive
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-3">
+          {currentTasks.length === 0 ? (
+            <div className="bg-card rounded-lg border p-6">
+              <div className="flex flex-col items-center justify-center text-center">
+                {hasActiveFilters ? (
+                  <>
+                    <Search className="h-12 w-12 text-muted-foreground/50 mb-3" />
+                    <h3 className="font-medium mb-1">No tasks match your filters</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Try adjusting your search criteria or clearing filters
+                    </p>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={clearAllFilters}
+                    >
+                      Clear filters
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-3">
+                      <CheckCircle2 className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                    <h3 className="font-medium mb-1">No tasks yet</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Create your first task to get started
+                    </p>
+                    <Button 
+                      size="sm"
+                      onClick={() => setIsNewTaskDialogOpen(true)}
+                      className="gap-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Create Task
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
+          ) : (
+            currentTasks.map((task) => (
+              <div 
+                key={task.id} 
+                className={cn(
+                  "bg-card rounded-lg border p-4 space-y-3",
+                  task.completed && "bg-muted/20",
+                  selectedTaskIds.includes(task.id) && "bg-primary/5 border-primary/20"
+                )}
+              >
+                {/* Task Header */}
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    checked={selectedTaskIds.includes(task.id)}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setSelectedTaskIds([...selectedTaskIds, task.id]);
+                      } else {
+                        setSelectedTaskIds(selectedTaskIds.filter(id => id !== task.id));
+                      }
+                    }}
+                    className="mt-1"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <h3 className={cn(
+                      "font-medium text-sm",
+                      task.completed && "line-through text-muted-foreground"
+                    )}>
+                      {task.title}
+                    </h3>
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <MoreHorizontal className="h-4 w-4" />
+                        <span className="sr-only">Open menu</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem 
+                        onClick={() => router.push(`/dashboard/${userId}/tasks/${task.id}`)}
+                      >
+                        View details
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={() => router.push(`/dashboard/${userId}/tasks/${task.id}/edit`)}
+                      >
+                        Edit task
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem 
+                        onClick={() => handleCompleteTask(task.id, !task.completed)}
+                      >
+                        {task.completed ? 'Mark incomplete' : 'Mark complete'}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="text-destructive">
+                        Delete task
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+
+                {/* Task Details */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="h-5 w-5 rounded bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                      <span className="text-xs font-medium text-blue-700 dark:text-blue-300">
+                        {task.list.board.title.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <span className="text-xs text-muted-foreground truncate">
+                      {task.list.board.title}
+                    </span>
+                  </div>
+                  <StatusBadge status={task.status} />
+                </div>
+
+                {/* Due Date */}
+                {task.dueDate && (
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-3 w-3 text-muted-foreground" />
+                    <span
+                      className={cn(
+                        "text-xs",
+                        new Date(task.dueDate) < new Date() && !task.completed
+                          ? "text-red-500 font-medium"
+                          : "text-muted-foreground"
+                      )}
+                    >
+                      Due {formatDate(task.dueDate)}
+                    </span>
+                  </div>
+                )}
+
+                {/* Quick Actions */}
+                <div className="flex items-center gap-2 pt-2 border-t">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleCompleteTask(task.id, !task.completed)}
+                    className="flex-1 gap-2"
+                  >
+                    <CheckCircle2 className="h-3 w-3" />
+                    {task.completed ? 'Incomplete' : 'Complete'}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => router.push(`/dashboard/${userId}/tasks/${task.id}`)}
+                    className="flex-1"
+                  >
+                    View
+                  </Button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Desktop Table View */}
+      <div className="hidden sm:block bg-card rounded-lg border shadow-sm overflow-hidden">
         {selectedTaskIds.length > 0 && (
           <div className="px-6 py-3 bg-primary/5 border-b flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -446,7 +647,7 @@ const handleCompleteTask = async (taskId: string, completed: boolean) => {
                   />
                 </TableHead>
                 <TableHead className="min-w-[250px] font-semibold">Task</TableHead>
-                <TableHead className="min-w-[150px] hidden sm:table-cell font-semibold">Project</TableHead>
+                <TableHead className="min-w-[150px] hidden lg:table-cell font-semibold">Project</TableHead>
                 <TableHead className="min-w-[120px] hidden md:table-cell font-semibold">Due Date</TableHead>
                 <TableHead className="min-w-[100px] font-semibold">Status</TableHead>
                 <TableHead className="w-[70px]">
@@ -527,8 +728,8 @@ const handleCompleteTask = async (taskId: string, completed: boolean) => {
                           {task.title}
                         </div>
                         
-                        {/* Mobile info */}
-                        <div className="sm:hidden space-y-1">
+                        {/* Mobile info for smaller tablets */}
+                        <div className="lg:hidden space-y-1">
                           <div className="text-xs text-muted-foreground">
                             {task.list.board.title}
                           </div>
@@ -545,7 +746,7 @@ const handleCompleteTask = async (taskId: string, completed: boolean) => {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="hidden sm:table-cell">
+                    <TableCell className="hidden lg:table-cell">
                       <div className="flex items-center gap-2">
                         <div className="h-6 w-6 rounded-md bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
                           <span className="text-xs font-medium text-blue-700 dark:text-blue-300">

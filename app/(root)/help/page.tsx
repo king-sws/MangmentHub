@@ -56,7 +56,6 @@ interface Category {
 }
 
 const HelpCenter = () => {
-  const [darkMode, setDarkMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
@@ -66,24 +65,6 @@ const HelpCenter = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  useEffect(() => {
-    // Check system preference for dark mode
-    if (typeof window !== 'undefined') {
-      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-      setDarkMode(prefersDark);
-    }
-  }, []);
-
-  useEffect(() => {
-    // Apply dark mode class to document
-    if (typeof document !== 'undefined') {
-      if (darkMode) {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
-    }
-  }, [darkMode]);
 
   const categories: Category[] = [
     {
@@ -453,14 +434,7 @@ const HelpCenter = () => {
                   </p>
                 </div>
               </div>
-              <Button
-                onClick={() => setDarkMode(!darkMode)}
-                variant="outline"
-                size="icon"
-                className="shadow-lg"
-              >
-                {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-              </Button>
+              
             </div>
           </div>
         </header>

@@ -26,6 +26,7 @@ import { format } from 'date-fns';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useTheme } from 'next-themes'; // Import useTheme hook
+import Image from 'next/image';
 
 interface DashboardSidebarProps {
   user: {
@@ -461,15 +462,24 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
     <div className="flex flex-col h-full bg-gradient-to-br from-background via-background to-muted/20 dark:from-background dark:via-background dark:to-muted/10">
       {/* Header/Logo area */}
       <div className="h-16 flex items-center px-4 border-b dark:border-gray-800">
-        <Link href={`/dashboard/${user.id}`} className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-md bg-primary flex items-center justify-center text-white shadow-sm hover:shadow transition-all duration-300 hover:scale-105">
-            <Laptop className="h-5 w-5 text-white dark:text-black " />
-          </div>
-          <span className="text-gray-900 dark:text-white font-bold text-xl tracking-tight relative">
-          Blutto
-          {/* Subtle underline accent */}
-          <div className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-blue-600 to-purple-600 group-hover:w-full transition-all duration-300"></div>
-        </span>        </Link>
+        <Link href="/" className="inline-block">
+              <div className="flex items-center space-x-2">
+                <Image
+                  src="/blutto-no.svg" 
+                  alt="Blutto Logo" 
+                  width={84} 
+                  height={84}
+                  className="dark:hidden " 
+                />
+                <Image 
+                  src="/blutto-white-no.svg" 
+                  alt="Blutto Logo" 
+                  width={84} 
+                  height={84}
+                  className="hidden dark:block " 
+                />
+              </div>
+            </Link>
       </div>
       {/* Navigation Links */}
       <div className="flex-1 overflow-y-auto py-3 px-3 space-y-6 hide-scrollbar">
