@@ -4,7 +4,8 @@
 "use client";
 
 import React, { useState, useEffect, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
+import useSafeSearchParams from '@/hooks/useSafeSearchParams';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -43,7 +44,7 @@ function SearchParamsHandler({
 }: { 
   onSearchParamsChange: (params: { success: string | null, canceled: string | null, sessionId: string | null }) => void 
 }) {
-  const searchParams = useSearchParams();
+  const searchParams = useSafeSearchParams();
   
   useEffect(() => {
     const success = searchParams ? searchParams.get("success") : null;

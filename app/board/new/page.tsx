@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
+import useSafeSearchParams from '@/hooks/useSafeSearchParams';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -39,7 +40,7 @@ export default function CreateBoardPage() {
   const [workspaces, setWorkspaces] = useState<WorkspaceData[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const searchParams = useSafeSearchParams();
   const { data: session } = useSession();
 
   // Pre-select workspace from URL params if provided

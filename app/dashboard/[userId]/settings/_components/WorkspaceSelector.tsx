@@ -1,7 +1,8 @@
 // app/settings/[userId]/_components/WorkspaceSelector.tsx
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
+import useSafeSearchParams from '@/hooks/useSafeSearchParams';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Building2, Crown, Shield, User, Users2 } from "lucide-react";
@@ -31,7 +32,7 @@ export function WorkspaceSelector({
   userId
 }: WorkspaceSelectorProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const searchParams = useSafeSearchParams();
 
   const handleWorkspaceChange = (workspaceId: string) => {
     const params = new URLSearchParams(searchParams?.toString() || "");

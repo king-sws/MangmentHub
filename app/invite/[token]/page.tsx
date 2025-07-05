@@ -3,7 +3,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
+import useSafeSearchParams from '@/hooks/useSafeSearchParams';
 import { Loader2, Mail, UserPlus, Shield, Users, CheckCircle, ArrowRight, Building2, Sparkles, Crown, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,7 +31,7 @@ export default function InvitePage({ params }: { params: { token: string } }) {
   } | null>(null);
 
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const searchParams = useSafeSearchParams();
 
   // Form states
   const [email, setEmail] = useState("");

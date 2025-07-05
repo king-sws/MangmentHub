@@ -3,7 +3,8 @@
 'use client';
 
 import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
+import useSafeSearchParams from '@/hooks/useSafeSearchParams';
 import { Loader2, ArrowLeft, Eye, EyeOff, CheckCircle, Shield, Lock, Mail } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -46,7 +47,7 @@ type ResetPasswordFormData = z.infer<typeof ResetPasswordSchema>;
 
 export default function ResetPasswordPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const searchParams = useSafeSearchParams();
   const token = searchParams?.get('token');
   
   const [isLoading, setIsLoading] = useState<boolean>(false);

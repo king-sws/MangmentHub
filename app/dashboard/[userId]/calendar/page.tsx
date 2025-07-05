@@ -1,8 +1,10 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
+import useSafeSearchParams from '@/hooks/useSafeSearchParams';
 import { use } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BoardContent } from "@/components/BoardContent";
@@ -131,8 +133,8 @@ export default function CalendarPage({ params }: { params: Promise<{ userId: str
   const { userId } = resolvedParams;
   
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const boardIdParam = searchParams.get('boardId');
+  const searchParams = useSafeSearchParams();
+  const boardIdParam = searchParams?.get('boardId');
   
   // Board state
   const [boards, setBoards] = useState<Board[]>([]);
