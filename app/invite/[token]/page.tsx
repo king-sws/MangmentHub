@@ -3,8 +3,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Suspense } from 'react';
 import { useRouter } from "next/navigation";
-import useSafeSearchParams from '@/hooks/useSafeSearchParams';
 import { Loader2, Mail, UserPlus, Shield, Users, CheckCircle, ArrowRight, Building2, Sparkles, Crown, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,8 +14,31 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SignInWithCredentials, SignUpWithCredentials } from "@/actions/action";
 import { toast } from "sonner";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 
-export default function InvitePage({ params }: { params: { token: string } }) {
+// Loading component for Suspense fallback
+function LoadingSpinner() {
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-[#FFFFFF] to-[#D2DCFF] dark:bg-gradient-to-br dark:from-gray-950 dark:via-black dark:to-gray-900 flex justify-center items-center">
+      {/* Background decorations */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute top-20 right-20 w-96 h-96 bg-gradient-to-br from-indigo-100/30 to-blue-200/20 dark:from-indigo-800/20 dark:to-indigo-700/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-20 left-20 w-80 h-80 bg-gradient-to-tr from-blue-100/25 to-indigo-50/15 dark:from-indigo-700/15 dark:to-gray-800/5 rounded-full blur-3xl" />
+      </div>
+      
+      <div className="relative z-10 text-center space-y-4">
+        <div className="relative">
+          <Loader2 className="h-12 w-12 animate-spin text-indigo-600 dark:text-indigo-400 mx-auto" />
+          <div className="absolute inset-0 h-12 w-12 rounded-full border-2 border-indigo-200 dark:border-indigo-900 animate-pulse mx-auto"></div>
+        </div>
+        <p className="text-slate-600 dark:text-slate-400 font-medium">Loading invitation details...</p>
+      </div>
+    </div>
+  );
+}
+
+// Main invite component
+function InvitePageContent({ params }: { params: { token: string } }) {
   const [loading, setLoading] = useState(true);
   const [inviteInfo, setInviteInfo] = useState<{
     email: string;
@@ -31,7 +54,7 @@ export default function InvitePage({ params }: { params: { token: string } }) {
   } | null>(null);
 
   const router = useRouter();
-  const searchParams = useSafeSearchParams();
+  const searchParams = useSearchParams();
 
   // Form states
   const [email, setEmail] = useState("");
@@ -143,23 +166,7 @@ export default function InvitePage({ params }: { params: { token: string } }) {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-[#FFFFFF] to-[#D2DCFF] dark:bg-gradient-to-br dark:from-gray-950 dark:via-black dark:to-gray-900 flex justify-center items-center">
-        {/* Background decorations */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-20 right-20 w-96 h-96 bg-gradient-to-br from-indigo-100/30 to-blue-200/20 dark:from-indigo-800/20 dark:to-indigo-700/10 rounded-full blur-3xl" />
-          <div className="absolute bottom-20 left-20 w-80 h-80 bg-gradient-to-tr from-blue-100/25 to-indigo-50/15 dark:from-indigo-700/15 dark:to-gray-800/5 rounded-full blur-3xl" />
-        </div>
-        
-        <div className="relative z-10 text-center space-y-4">
-          <div className="relative">
-            <Loader2 className="h-12 w-12 animate-spin text-indigo-600 dark:text-indigo-400 mx-auto" />
-            <div className="absolute inset-0 h-12 w-12 rounded-full border-2 border-indigo-200 dark:border-indigo-900 animate-pulse mx-auto"></div>
-          </div>
-          <p className="text-slate-600 dark:text-slate-400 font-medium">Loading invitation details...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   if (!inviteInfo?.isValid) {
@@ -512,5 +519,14 @@ export default function InvitePage({ params }: { params: { token: string } }) {
         </div>
       </div>
     </div>
+  );
+}
+
+// Main export with Suspense wrapper
+export default function InvitePage({ params }: { params: { token: string } }) {
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <InvitePageContent params={params} />
+    </Suspense>
   );
 }

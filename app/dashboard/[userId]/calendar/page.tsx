@@ -2,9 +2,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, Suspense } from "react";
 import { useRouter } from "next/navigation";
-import useSafeSearchParams from '@/hooks/useSafeSearchParams';
 import { use } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BoardContent } from "@/components/BoardContent";
@@ -60,6 +59,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useSearchParams } from "next/navigation";
 
 interface Board {
   id: string;
@@ -127,13 +127,31 @@ const STATUS_STYLES = {
   }
 };
 
-export default function CalendarPage({ params }: { params: Promise<{ userId: string }> | { userId: string } }) {
+  const LoadingSpinner = () => (
+  <div className="min-h-screen bg-gradient-to-b from-[#FFFFFF] to-[#D2DCFF] dark:bg-gradient-to-br dark:from-gray-950 dark:via-black dark:to-gray-900 flex justify-center items-center">
+      {/* Background decorations */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute top-20 right-20 w-96 h-96 bg-gradient-to-br from-indigo-100/30 to-blue-200/20 dark:from-indigo-800/20 dark:to-indigo-700/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-20 left-20 w-80 h-80 bg-gradient-to-tr from-blue-100/25 to-indigo-50/15 dark:from-indigo-700/15 dark:to-gray-800/5 rounded-full blur-3xl" />
+      </div>
+      
+      <div className="relative z-10 text-center space-y-4">
+        <div className="relative">
+          <Loader2 className="h-12 w-12 animate-spin text-indigo-600 dark:text-indigo-400 mx-auto" />
+          <div className="absolute inset-0 h-12 w-12 rounded-full border-2 border-indigo-200 dark:border-indigo-900 animate-pulse mx-auto"></div>
+        </div>
+        <p className="text-slate-600 dark:text-slate-400 font-medium">Loading...</p>
+      </div>
+    </div>
+);
+
+function CalendarPageContent({ params }: { params: Promise<{ userId: string }> | { userId: string } }) {
   // Use React.use to unwrap params if it's a Promise
   const resolvedParams = 'then' in params ? use(params) : params;
   const { userId } = resolvedParams;
   
   const router = useRouter();
-  const searchParams = useSafeSearchParams();
+  const searchParams = useSearchParams();
   const boardIdParam = searchParams?.get('boardId');
   
   // Board state
@@ -223,6 +241,8 @@ export default function CalendarPage({ params }: { params: Promise<{ userId: str
       toast.error("Failed to load board details");
     }
   };
+
+
 
   // Fetch calendar data
   const fetchCalendarData = useCallback(async () => {
@@ -1006,5 +1026,13 @@ const renderBoardView = () => {
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+export default function CalendarPage({ params }: { params: Promise<{ userId: string }> | { userId: string } }) {
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <CalendarPageContent params={params} />
+    </Suspense>
   );
 }

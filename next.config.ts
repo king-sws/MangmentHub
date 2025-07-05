@@ -12,6 +12,7 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     // You can add supported experimental options here
+    
   },
   output: 'standalone',
 };

@@ -1,13 +1,12 @@
 // app/settings/[userId]/_components/WorkspaceSelector.tsx
 "use client";
 
-import { useRouter } from "next/navigation";
-import useSafeSearchParams from '@/hooks/useSafeSearchParams';
+import { useRouter, useSearchParams } from "next/navigation";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Crown, Shield, User, Users2 } from "lucide-react";
+import { Building2, Crown, Loader2, Shield, User, Users2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import React from "react";
+import React, { Suspense } from "react";
 
 interface Workspace {
   id: string;
@@ -26,13 +25,33 @@ interface WorkspaceSelectorProps {
   userId: string;
 }
 
-export function WorkspaceSelector({
+// Loading spinner component
+const LoadingSpinner = () => (
+  <div className="min-h-screen bg-gradient-to-b from-[#FFFFFF] to-[#D2DCFF] dark:bg-gradient-to-br dark:from-gray-950 dark:via-black dark:to-gray-900 flex justify-center items-center">
+      {/* Background decorations */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute top-20 right-20 w-96 h-96 bg-gradient-to-br from-indigo-100/30 to-blue-200/20 dark:from-indigo-800/20 dark:to-indigo-700/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-20 left-20 w-80 h-80 bg-gradient-to-tr from-blue-100/25 to-indigo-50/15 dark:from-indigo-700/15 dark:to-gray-800/5 rounded-full blur-3xl" />
+      </div>
+      
+      <div className="relative z-10 text-center space-y-4">
+        <div className="relative">
+          <Loader2 className="h-12 w-12 animate-spin text-indigo-600 dark:text-indigo-400 mx-auto" />
+          <div className="absolute inset-0 h-12 w-12 rounded-full border-2 border-indigo-200 dark:border-indigo-900 animate-pulse mx-auto"></div>
+        </div>
+        <p className="text-slate-600 dark:text-slate-400 font-medium">Loading workspaces...</p>
+      </div>
+    </div>
+);
+
+// Main workspace selector content
+function WorkspaceSelectorContent({
   workspaces,
   selectedWorkspaceId,
   userId
 }: WorkspaceSelectorProps) {
   const router = useRouter();
-  const searchParams = useSafeSearchParams();
+  const searchParams = useSearchParams();
 
   const handleWorkspaceChange = (workspaceId: string) => {
     const params = new URLSearchParams(searchParams?.toString() || "");
@@ -242,5 +261,14 @@ export function WorkspaceSelector({
         </div>
       </div>
     </div>
+  );
+}
+
+// Main exported component with Suspense wrapper
+export default function WorkspaceSelector(props: WorkspaceSelectorProps) {
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <WorkspaceSelectorContent {...props} />
+    </Suspense>
   );
 }

@@ -2,9 +2,8 @@
 /* eslint-disable react/no-unescaped-entities */
 'use client';
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import useSafeSearchParams from '@/hooks/useSafeSearchParams';
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, ArrowLeft, Eye, EyeOff, CheckCircle, Shield, Lock, Mail } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -45,9 +44,52 @@ const ResetPasswordSchema = z.object({
 
 type ResetPasswordFormData = z.infer<typeof ResetPasswordSchema>;
 
-export default function ResetPasswordPage() {
+// Loading component for Suspense fallback
+function LoadingSpinner() {
+  return (
+    <div className="min-h-screen grid grid-cols-1 md:grid-cols-2">
+      <div className="flex flex-col justify-center px-6 py-12 lg:px-20 bg-white dark:bg-gray-900">
+        <div className="mx-auto w-full max-w-md space-y-6 text-center">
+          <div className="flex justify-center">
+            <div className="rounded-full bg-primary/10 p-3">
+              <Loader2 className="h-8 w-8 text-primary animate-spin" />
+            </div>
+          </div>
+          <div>
+            <h2 className="text-3xl font-bold">Loading...</h2>
+            <p className="text-muted-foreground mt-2">
+              Please wait while we prepare your reset page...
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="hidden md:block bg-gradient-to-br from-primary to-primary/80 relative">
+        <div className="absolute inset-0 bg-black/30 z-10" />
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-12">
+          <div className="max-w-md text-center text-white">
+            <Shield className="h-16 w-16 mx-auto mb-6" />
+            <h1 className="text-4xl font-bold mb-6">Secure Access</h1>
+            <p className="text-lg">
+              Loading your secure password reset interface...
+            </p>
+          </div>
+        </div>
+        <Image
+          src="/bluto-auth.jpg"
+          alt="Brand Illustration"
+          fill
+          className="object-cover object-center"
+          priority
+        />
+      </div>
+    </div>
+  );
+}
+
+function ResetPasswordContent() {
   const router = useRouter();
-  const searchParams = useSafeSearchParams();
+  const searchParams = useSearchParams();
   const token = searchParams?.get('token');
   
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -467,5 +509,13 @@ export default function ResetPasswordPage() {
         />
       </div>
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <ResetPasswordContent />
+    </Suspense>
   );
 }
