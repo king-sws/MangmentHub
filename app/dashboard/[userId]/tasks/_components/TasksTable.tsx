@@ -1,7 +1,8 @@
+/* eslint-disable react/no-unescaped-entities */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   Table,
@@ -25,7 +26,8 @@ import {
   CheckCircle2,
   Clock,
   AlertCircle,
-  RefreshCw
+  RefreshCw,
+  X
 } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
 import { TasksTableFilters } from "./TasksTableFilters";
@@ -65,13 +67,12 @@ export function TasksTable({ userId }: TasksTableProps) {
   // Selection state for bulk actions
   const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
 
-  // Enhanced filter handlers with debouncing
+  // Remove the search debounce effect that was calling updateFilters
+  // Now search is handled client-side only
   useEffect(() => {
-    const timer = setTimeout(() => {
-      updateFilters({ search: searchQuery || undefined });
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [searchQuery, updateFilters]);
+    // Reset to page 1 when search changes (client-side only)
+    setCurrentPage(1);
+  }, [searchQuery]);
 
   const handleStatusChange = (statuses: string[]) => {
     setSelectedStatuses(statuses);
@@ -146,11 +147,109 @@ export function TasksTable({ userId }: TasksTableProps) {
     }
   };
 
-  const handleBulkAction = async (action: 'complete' | 'archive' | 'delete') => {
-    // Implement bulk actions
-    console.log(`Bulk ${action} for tasks:`, selectedTaskIds);
+const handleBulkAction = async (action: 'complete' | 'archive' | 'delete') => {
+  try {
+    if (action === 'complete') {
+      // Handle bulk complete
+      const promises = selectedTaskIds.map(async (taskId) => {
+        const currentTask = tasks?.find(task => task.id === taskId);
+        if (!currentTask) return;
+
+        // Optimistic update
+        updateTaskInState(taskId, { 
+          completed: true, 
+          status: "DONE"
+        });
+
+        const response = await fetch(`/api/tasks/${taskId}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ 
+            completed: true,
+            status: "DONE"
+          }),
+        });
+
+        if (!response.ok) {
+          // Revert on error
+          updateTaskInState(taskId, { 
+            completed: currentTask.completed, 
+            status: currentTask.status
+          });
+          throw new Error(`Failed to update task ${taskId}`);
+        }
+
+        const updatedTask = await response.json();
+        updateTaskInState(taskId, {
+          completed: updatedTask.completed,
+          status: updatedTask.status,
+          ...updatedTask
+        });
+      });
+
+      await Promise.all(promises);
+      
+    } else if (action === 'archive') {
+      // Handle bulk archive
+      const promises = selectedTaskIds.map(async (taskId) => {
+        const currentTask = tasks?.find(task => task.id === taskId);
+        if (!currentTask) return;
+
+        
+
+        const response = await fetch(`/api/tasks/${taskId}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ 
+            status: "ARCHIVED"
+          }),
+        });
+
+        if (!response.ok) {
+          // Revert on error
+          updateTaskInState(taskId, { 
+            status: currentTask.status
+          });
+          throw new Error(`Failed to archive task ${taskId}`);
+        }
+
+        const updatedTask = await response.json();
+        updateTaskInState(taskId, updatedTask);
+      });
+
+      await Promise.all(promises);
+
+    } else if (action === 'delete') {
+      // Handle bulk delete
+      const promises = selectedTaskIds.map(async (taskId) => {
+        const response = await fetch(`/api/tasks/${taskId}`, {
+          method: "DELETE",
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to delete task ${taskId}`);
+        }
+      });
+
+      await Promise.all(promises);
+      
+      // Refetch data after deletion
+      refetch();
+    }
+
+    // Clear selection after successful action
     setSelectedTaskIds([]);
-  };
+    
+  } catch (error) {
+    console.error(`Failed to ${action} tasks:`, error);
+    // Optionally show a toast notification to the user
+    // toast.error(`Failed to ${action} tasks. Please try again.`);
+  }
+};
 
   const handleNewTaskCreated = () => {
     refetch();
@@ -167,9 +266,52 @@ export function TasksTable({ userId }: TasksTableProps) {
       status: undefined,
       projectId: undefined,
       dueDate: undefined,
-      search: undefined
     });
   };
+
+  const clearSearchQuery = () => {
+    setSearchQuery("");
+    setCurrentPage(1);
+  };
+
+  // Professional client-side filtering using useMemo for performance
+  const filteredTasks = useMemo(() => {
+    if (!tasks) return [];
+    
+    return tasks.filter((task) => {
+      // Search filter - searches in title, description, and project name
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase().trim();
+        const matchesTitle = task.title.toLowerCase().includes(query);
+        const matchesDescription = task.description?.toLowerCase().includes(query);
+        const matchesProject = task.list.board.title.toLowerCase().includes(query);
+        
+        if (!matchesTitle && !matchesDescription && !matchesProject) {
+          return false;
+        }
+      }
+
+      // Status filter
+      if (selectedStatuses.length > 0 && !selectedStatuses.includes(task.status)) {
+        return false;
+      }
+
+      // Project filter
+      if (selectedProjects.length > 0 && !selectedProjects.includes(task.list.board.id)) {
+        return false;
+      }
+
+      // Due date filter (if you want to implement date range filtering)
+      if (dueDate) {
+        const taskDueDate = task.dueDate ? new Date(task.dueDate) : null;
+        if (!taskDueDate || taskDueDate.toDateString() !== dueDate.toDateString()) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [tasks, searchQuery, selectedStatuses, selectedProjects, dueDate]);
 
   if (isLoading) {
     return (
@@ -213,26 +355,6 @@ export function TasksTable({ userId }: TasksTableProps) {
       index === self.findIndex((b) => b.id === board.id)
     );
 
-  // Enhanced filtering with search
-  const filteredTasks = tasks.filter((task) => {
-    // Search filter
-    if (searchQuery && !task.title.toLowerCase().includes(searchQuery.toLowerCase())) {
-      return false;
-    }
-
-    // Status filter
-    if (selectedStatuses.length > 0 && !selectedStatuses.includes(task.status)) {
-      return false;
-    }
-
-    // Project filter
-    if (selectedProjects.length > 0 && !selectedProjects.includes(task.list.board.id)) {
-      return false;
-    }
-
-    return true;
-  });
-
   // Enhanced pagination
   const indexOfLastTask = currentPage * tasksPerPage;
   const indexOfFirstTask = indexOfLastTask - tasksPerPage;
@@ -254,7 +376,7 @@ export function TasksTable({ userId }: TasksTableProps) {
   const hasActiveFilters = selectedStatuses.length > 0 || 
                           selectedProjects.length > 0 || 
                           dueDate || 
-                          searchQuery;
+                          searchQuery.trim();
 
   return (
     <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
@@ -314,14 +436,24 @@ export function TasksTable({ userId }: TasksTableProps) {
       <div className="bg-card rounded-lg border p-3 sm:p-4">
         <div className="space-y-3 sm:space-y-4">
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-            {/* Search */}
+            {/* Enhanced Search with Clear Button */}
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              {searchQuery && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearSearchQuery}
+                  className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0 hover:bg-muted/80"
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              )}
               <Input
-                placeholder="Search tasks..."
+                placeholder="Search tasks, projects, descriptions..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
+                className="pl-10 pr-8"
               />
             </div>
 
@@ -340,7 +472,7 @@ export function TasksTable({ userId }: TasksTableProps) {
                 <span className="sm:inline">Filters</span>
                 {hasActiveFilters && (
                   <Badge variant="secondary" className="h-5 w-5 rounded-full p-0 text-xs">
-                    {selectedStatuses.length + selectedProjects.length + (dueDate ? 1 : 0) + (searchQuery ? 1 : 0)}
+                    {selectedStatuses.length + selectedProjects.length + (dueDate ? 1 : 0) + (searchQuery.trim() ? 1 : 0)}
                   </Badge>
                 )}
               </Button>
@@ -355,6 +487,81 @@ export function TasksTable({ userId }: TasksTableProps) {
               </Button>
             </div>
           </div>
+
+          {/* Active Filters Display */}
+          {hasActiveFilters && (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm text-muted-foreground">Active filters:</span>
+              
+              {searchQuery.trim() && (
+                <Badge variant="secondary" className="gap-1">
+                  Search: "{searchQuery}"
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearSearchQuery}
+                    className="h-3 w-3 p-0 hover:bg-muted/80"
+                  >
+                    <X className="h-2 w-2" />
+                  </Button>
+                </Badge>
+              )}
+              
+              {selectedStatuses.map(status => (
+                <Badge key={status} variant="secondary" className="gap-1">
+                  Status: {status}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleStatusChange(selectedStatuses.filter(s => s !== status))}
+                    className="h-3 w-3 p-0 hover:bg-muted/80"
+                  >
+                    <X className="h-2 w-2" />
+                  </Button>
+                </Badge>
+              ))}
+              
+              {selectedProjects.map(projectId => {
+                const project = uniqueProjects.find(p => p.id === projectId);
+                return (
+                  <Badge key={projectId} variant="secondary" className="gap-1">
+                    Project: {project?.title}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleProjectChange(selectedProjects.filter(p => p !== projectId))}
+                      className="h-3 w-3 p-0 hover:bg-muted/80"
+                    >
+                      <X className="h-2 w-2" />
+                    </Button>
+                  </Badge>
+                );
+              })}
+              
+              {dueDate && (
+                <Badge variant="secondary" className="gap-1">
+                  Due: {formatDate(dueDate)}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDueDateChange(undefined)}
+                    className="h-3 w-3 p-0 hover:bg-muted/80"
+                  >
+                    <X className="h-2 w-2" />
+                  </Button>
+                </Badge>
+              )}
+              
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={clearAllFilters}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                Clear all
+              </Button>
+            </div>
+          )}
 
           {/* Collapsible Filters */}
           {showFilters && (
@@ -372,23 +579,23 @@ export function TasksTable({ userId }: TasksTableProps) {
                 onProjectChange={handleProjectChange}
                 onDueDateChange={handleDueDateChange}
               />
-              
-              {hasActiveFilters && (
-                <div className="mt-3 flex justify-between items-center">
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={clearAllFilters}
-                    className="text-muted-foreground hover:text-foreground"
-                  >
-                    Clear all filters
-                  </Button>
-                </div>
-              )}
             </div>
           )}
         </div>
       </div>
+
+      {/* Search Results Info */}
+      {searchQuery.trim() && (
+        <div className="bg-muted/50 rounded-lg border p-3">
+          <div className="flex items-center gap-2 text-sm">
+            <Search className="h-4 w-4 text-muted-foreground" />
+            <span>
+              Found <span className="font-medium">{filteredTasks.length}</span> result{filteredTasks.length !== 1 ? 's' : ''} for 
+              <span className="font-medium"> "{searchQuery}"</span>
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Mobile Card View for Small Screens */}
       <div className="block sm:hidden">

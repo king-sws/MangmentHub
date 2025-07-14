@@ -1,12 +1,13 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import { DndContext, DragEndEvent, DragOverEvent, DragStartEvent, PointerSensor, closestCenter, useSensor, useSensors } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
 import { Plus, AlertOctagon } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { SortableList } from "./SortableList";
+import { SortableList, SortableListProps } from "./SortableList";
 import { SortableCard } from "./SortableCard";
 import { CardDialog } from "./CardDialog";
 import { ListDialog } from "./ListDialog";
@@ -68,6 +69,7 @@ export function BoardContent({ board }: BoardContentProps) {
   const [creatingCardInList, setCreatingCardInList] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [boardData, setBoardData] = useState<Board>(board);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -77,55 +79,72 @@ export function BoardContent({ board }: BoardContentProps) {
     })
   );
 
+  const refreshInProgress = useRef(false);
+  const [listOperationLoading, setListOperationLoading] = useState<Record<string, boolean>>({});
+
   // Load the latest data from the server
-  const refreshData = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
+
+const refreshData = useCallback(async () => {
+  // Prevent multiple simultaneous refresh calls
+  if (refreshInProgress.current) {
+    console.log("Refresh already in progress, skipping...");
+    return;
+  }
+  
+  try {
+    refreshInProgress.current = true;
+    setIsLoading(true);
+    setError(null);
+    
+    console.log("Refreshing board data for ID:", board.id);
+    const response = await fetch(`/api/board/${board.id}/full`);
+    
+    console.log("API response status:", response.status);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("API error response:", errorText);
+      throw new Error(`Failed to refresh board data: ${response.status} - ${errorText}`);
+    }
+    
+    const data = await response.json();
+    console.log("API response data structure:", {
+      hasLists: !!data.lists,
+      listsCount: data.lists?.length || 0,
+      title: data.title
+    });
+    
+    if (data && data.lists) {
+      // Sort lists by order
+      const sortedLists = [...data.lists].sort((a, b) => a.order - b.order);
       
-      console.log("Refreshing board data for ID:", board.id);
-      const response = await fetch(`/api/board/${board.id}/full`);
-      
-      console.log("API response status:", response.status);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("API error response:", errorText);
-        throw new Error(`Failed to refresh board data: ${response.status} - ${errorText}`);
-      }
-      
-      const data = await response.json();
-      console.log("API response data structure:", {
-        hasLists: !!data.lists,
-        listsCount: data.lists?.length || 0,
-        title: data.title
+      // Sort cards within each list by order
+      sortedLists.forEach(list => {
+        if (list.cards) {
+          list.cards.sort((a: Card, b: Card) => a.order - b.order);
+        } else {
+          list.cards = [];
+        }
       });
       
-      if (data && data.lists) {
-        // Sort lists by order
-        const sortedLists = [...data.lists].sort((a, b) => a.order - b.order);
-        
-        // Sort cards within each list by order
-        sortedLists.forEach(list => {
-          if (list.cards) {
-            list.cards.sort((a: Card, b: Card) => a.order - b.order);
-          } else {
-            list.cards = [];
-          }
-        });
-        
-        setLists(sortedLists);
-      } else {
-        setLists([]);
-        console.warn("No lists data found in the response", data);
-      }
-    } catch (err) {
-      console.error("Error refreshing data:", err);
-      setError(err instanceof Error ? err.message : "Could not load the latest board data. Please try again.");
-    } finally {
-      setIsLoading(false);
+      // Only update state if data has actually changed
+      setLists(prevLists => {
+        const hasChanged = JSON.stringify(prevLists) !== JSON.stringify(sortedLists);
+        return hasChanged ? sortedLists : prevLists;
+      });
+    } else {
+      setLists([]);
+      console.warn("No lists data found in the response", data);
     }
-  }, [board.id]);
+  } catch (err) {
+    console.error("Error refreshing data:", err);
+    setError(err instanceof Error ? err.message : "Could not load the latest board data. Please try again.");
+  } finally {
+    setIsLoading(false);
+    refreshInProgress.current = false;
+  }
+}, [board.id]); // Only depend on board.id
+
 
   useEffect(() => {
     // Initialize with data from props
@@ -391,6 +410,98 @@ export function BoardContent({ board }: BoardContentProps) {
     setActiveList(null);
   };
 
+  // Add these state variables
+  const [editingList, setEditingList] = useState<List | null>(null);
+  const memoizedLists = useMemo(() => lists, [lists]);
+  const MemoizedSortableCard = memo(SortableCard);
+
+  interface MemoizedSortableListProps extends SortableListProps {
+  cards: Card[];
+  onEditCard: (card: Card) => void;
+  onDeleteCard: (cardId: string) => void;
+  onToggleCardComplete: (card: Card) => void;
+}
+
+
+  
+  
+
+
+// Edit List handler
+const handleEditList = useCallback(async (listId: string, listTitle: string) => {
+  setEditingList({ id: listId, title: listTitle } as List);
+  await refreshData();
+  setIsListDialogOpen(true);
+}, []);
+
+// const handleEditList = async (listId: string, newTitle: string) => {
+//   try {
+//     const response = await fetch(`/api/lists/${listId}`, {
+//       method: 'PATCH',
+//       headers: { 'Content-Type': 'application/json' },
+//       body: JSON.stringify({ title: newTitle })
+//     });
+    
+//     if (response.ok) {
+//       const updatedList = await response.json();
+//       toast.success("List updated successfully");
+      
+//       // Make sure to refresh your data here
+//       await refreshData(); // or however you refresh your lists
+      
+//       // Or update the local state directly
+//       setLists(prevLists => 
+//         prevLists.map(list => 
+//           list.id === listId ? { ...list, title: newTitle } : list
+//         )
+//       );
+//     } else {
+//       const error = await response.json();
+//       toast.error(error.message || "Failed to update list");
+//     }
+//   } catch (err) {
+//     console.error("Edit list error:", err);
+//     toast.error("Failed to update list");
+//   }
+// };
+
+// Duplicate List handler 
+const handleDuplicateList = async (listId: string) => {
+  try {
+    const list = lists.find(l => l.id === listId);
+    if (!list) return;
+    
+    const response = await fetch('/api/lists/duplicate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ listId })
+    });
+    
+    if (response.ok) {
+      toast.success("List duplicated successfully");
+      await refreshData();
+    }
+  } catch (err) {
+    toast.error("Failed to duplicate list");
+  }
+};
+
+// Archive List handler (simplified example)
+const handleArchiveList = async (listId: string) => {
+  try {
+    const response = await fetch(`/api/lists/${listId}/archive`, {
+      method: 'PATCH'
+    });
+    
+    if (response.ok) {
+      toast.success("List archived successfully");
+      await refreshData();
+    }
+  } catch (err) {
+    toast.error("Failed to archive list");
+  }
+};
+
   const handleAddCard = async (listId: string) => {
     setCreatingCardInList(listId);
     setIsCreatingCard(true);
@@ -569,14 +680,45 @@ export function BoardContent({ board }: BoardContentProps) {
     setIsListDialogOpen(true);
   };
 
-  const handleSaveList = async (title: string) => {
-    try {
-      setIsLoading(true);
+// Replace your current handleSaveList function with this fixed version:
+
+const handleSaveList = useCallback(async (title: string) => {
+  // Prevent multiple simultaneous saves
+  if (isLoading) {
+    console.log("Save already in progress, skipping...");
+    return;
+  }
+
+  try {
+    setIsLoading(true);
+    
+    if (editingList) {
+      // Update existing list
+      const response = await fetch(`/api/lists/${editingList.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title })
+      });
       
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(`Failed to update list: ${response.status} ${errorData ? JSON.stringify(errorData) : ''}`);
+      }
+      
+      // Update local state immediately - more defensive approach
+      setLists(prevLists => {
+        return prevLists.map(list => 
+          list.id === editingList.id ? { ...list, title } : list
+        );
+      });
+      
+      toast.success("List updated successfully");
+    } else {
+      // Create new list
       const payload = {
         title,
         boardId: board.id,
-        order: lists.length // Add at the end
+        order: lists.length // Capture current length
       };
       
       const response = await fetch('/api/lists', {
@@ -599,16 +741,19 @@ export function BoardContent({ board }: BoardContentProps) {
       setLists(prevLists => [...prevLists, newList]);
       
       toast.success("List created successfully");
-      setIsListDialogOpen(false);
-    } catch (err) {
-      console.error("List creation error:", err);
-      toast.error(err instanceof Error ? err.message : "Failed to create list");
-      // Refresh to ensure UI is in sync with server
-      await refreshData();
-    } finally {
-      setIsLoading(false);
     }
-  };
+    
+    // Close dialog and reset state
+    setIsListDialogOpen(false);
+    setEditingList(null);
+    
+  } catch (err) {
+    console.error("List save error:", err);
+    toast.error(err instanceof Error ? err.message : "Failed to save list");
+  } finally {
+    setIsLoading(false);
+  }
+}, [editingList, board.id, isLoading]); // Remove lists.length dependency // Proper dependencies
 
   const handleDeleteList = async (listId: string) => {
     try {
@@ -674,7 +819,7 @@ export function BoardContent({ board }: BoardContentProps) {
         onDragEnd={handleDragEnd}
       >
         <div className="flex gap-4 overflow-x-auto pb-4">
-          {lists.map((list) => (
+          {memoizedLists.map((list) => (
             <SortableList
               key={list.id}
               id={list.id}
@@ -682,10 +827,17 @@ export function BoardContent({ board }: BoardContentProps) {
               title={list.title}
               onAddCard={() => handleAddCard(list.id)}
               onDeleteList={() => handleDeleteList(list.id)}
+              onEditList={() => handleEditList(list.id, list.title)}
+              // Add these missing actions:
+              onDuplicateList={() => handleDuplicateList(list.id)}
+              // onArchiveList={() => handleArchiveList(list.id)}
+              // Pass task count for progress indicator
+              taskCount={list.cards.length}
+              completedCount={list.cards.filter(c => c.completed).length}
             >
               {list.cards && list.cards.length > 0 ? (
                 list.cards.map((card) => (
-                  <SortableCard
+                  <MemoizedSortableCard
                     key={card.id}
                     id={card.id}
                     title={card.title}
@@ -729,13 +881,17 @@ export function BoardContent({ board }: BoardContentProps) {
       )}
 
       {isListDialogOpen && (
-        <ListDialog
-          isOpen={isListDialogOpen}
-          onClose={() => setIsListDialogOpen(false)}
-          onSave={handleSaveList}
-          isLoading={isLoading}
-        />
-      )}
+  <ListDialog
+    isOpen={isListDialogOpen}
+    onClose={() => {
+      setIsListDialogOpen(false);
+      setEditingList(null);
+    }}
+    onSave={handleSaveList}
+    isLoading={isLoading}
+    initialTitle={editingList?.title} // Pass current title
+  />
+)}
     </div>
   );
 }

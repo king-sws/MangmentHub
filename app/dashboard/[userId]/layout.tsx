@@ -4,6 +4,24 @@ import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { DashboardThemeProvider } from '@/components/dashboard-theme-provider';
 import ClientWrapper from './_components/client-wrapper';
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Blutto Dashboard',
+  description: 'Manage your projects, tasks, and teams in one powerful dashboard. Powered by Blutto.',
+  keywords: ['Blutto', 'dashboard', 'task management', 'project collaboration', 'productivity tool'],
+  openGraph: {
+    title: 'Blutto Dashboard',
+    description: 'The all-in-one dashboard to manage your productivity and collaboration with ease.',
+    url: 'https://blutto.verecel.app/',
+    siteName: 'Blutto',
+    type: 'website',
+  },
+
+  icons: {
+    icon: '/favicon.ico',
+  },
+};
 
 export default async function DashboardLayout({
   children,

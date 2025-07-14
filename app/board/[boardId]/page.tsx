@@ -16,6 +16,16 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 
+// app/dashboard/[userId]/workspace/[workspaceId]/board/[boardId]/page.tsx
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Board | Blutto',
+  description: 'Track tasks, manage timelines, and collaborate visually with your team using Blutto’s board view.',
+  keywords: ['Blutto', 'Board', 'Kanban', 'Project management', 'Task tracking', 'Team productivity'],
+};
+
+
 interface BoardPageProps {
   params: { boardId: string };
 }
@@ -80,7 +90,7 @@ export default async function BoardPage({ params }: BoardPageProps) {
     const totalLists = board.lists.length;
 
     return (
-      <div className="flex flex-col min-h-screen bg-gradient-to-br from-slate-50 to-slate-100/50 dark:from-slate-950 dark:to-slate-900/50">
+      <div className="flex flex-col min-h-screen bg-gradient-to-br custom-scrollbar from-white to-slate-100 dark:from-[#000000] dark:to-[#111827]">
         {/* Enhanced Responsive Header */}
         <header className="bg-white/95 dark:bg-slate-950/95 border-b border-slate-200/60 dark:border-slate-800/60 backdrop-blur-md supports-[backdrop-filter]:bg-white/90 dark:supports-[backdrop-filter]:bg-slate-950/90 sticky top-0 z-50 shadow-sm">
           <div className="px-3 sm:px-6 py-3 sm:py-4">

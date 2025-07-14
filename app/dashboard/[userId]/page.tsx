@@ -313,9 +313,9 @@ export default async function DashboardPage({ params }: { params: { userId: stri
       <Suspense fallback={<div className="text-2xl font-bold">--</div>}>
         <CompletedTasksCount userId={session.user.id} />
       </Suspense>
-      <div className="flex items-center mt-1">
-        <Progress value={65} className="h-1 bg-green-100/50 dark:bg-green-950/50 [&>div]:bg-green-600 dark:[&>div]:bg-green-400" />
-        <span className="text-xs text-muted-foreground ml-2">65%</span>
+      <div className="flex items-center mt-1 opacity-0">
+        <Progress value={0} className="h-1 bg-green-100/50 dark:bg-green-950/50 [&>div]:bg-green-600 dark:[&>div]:bg-green-400" />
+        <span className="text-xs text-muted-foreground ml-2">0%</span>
       </div>
       <p className="text-xs text-muted-foreground mt-2">
         Tasks successfully completed
@@ -335,9 +335,9 @@ export default async function DashboardPage({ params }: { params: { userId: stri
       <Suspense fallback={<div className="text-2xl font-bold">--</div>}>
         <UpcomingTasksCount userId={session.user.id} />
       </Suspense>
-      <div className="flex items-center mt-1">
-        <Progress value={38} className="h-1 bg-amber-100/50 dark:bg-amber-950/50 [&>div]:bg-amber-600 dark:[&>div]:bg-amber-400" />
-        <span className="text-xs text-muted-foreground ml-2">38%</span>
+      <div className="flex items-center mt-1 opacity-0">
+        <Progress value={0} className="h-1 bg-amber-100/50 dark:bg-amber-950/50 [&>div]:bg-amber-600 dark:[&>div]:bg-amber-400" />
+        <span className="text-xs text-muted-foreground ml-2">0%</span>
       </div>
       <p className="text-xs text-muted-foreground mt-2">
         Tasks due this week

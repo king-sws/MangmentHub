@@ -10,53 +10,63 @@ export interface List {
   order: number;
   createdAt: string;
   updatedAt: string;
+  _count?: {
+    cards: number;
+  };
 }
 
 interface UseLists {
   lists: List[];
   isLoading: boolean;
   error: Error | null;
-  refetch: () => void; // Added refetch function
+  refetch: () => void;
 }
 
 export function useLists(boardId?: string): UseLists {
   const [lists, setLists] = useState<List[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-  const [refreshKey, setRefreshKey] = useState(0); // Added for manual refetching
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     async function fetchLists() {
       // Don't fetch if no boardId provided
       if (!boardId) {
         setLists([]);
+        setIsLoading(false);
         return;
       }
-      
+
       try {
         setIsLoading(true);
-        setError(null); // Reset error state before fetching
-        
+        setError(null);
+
         const response = await fetch(`/api/lists?boardId=${boardId}`, {
-          // Add cache: no-store to prevent stale data
-          cache: 'no-store',
-          next: { revalidate: 0 }
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
         });
-        
+
         if (!response.ok) {
           const errorText = await response.text();
           throw new Error(`Failed to fetch lists: ${response.status} ${errorText}`);
         }
+
+        const data = await response.json();
         
-        const listsData = await response.json();
-        
-        // Verify the response is an array
-        if (!Array.isArray(listsData)) {
-          console.error("Invalid lists data format:", listsData);
+        // Handle the response format from your API
+        // Your API returns { lists: [...], permissions: {...}, userRole: '...' }
+        if (data && typeof data === 'object' && data.lists && Array.isArray(data.lists)) {
+          setLists(data.lists);
+        } else if (Array.isArray(data)) {
+          // Fallback if API returns direct array
+          setLists(data);
+        } else {
+          console.error("Invalid lists data format:", data);
+          console.error("Expected format: { lists: [...] } or [...]");
           throw new Error("Received invalid data format for lists");
         }
-        
-        setLists(listsData);
       } catch (err) {
         setError(err instanceof Error ? err : new Error(String(err)));
         console.error("Error fetching lists:", err);
@@ -66,7 +76,7 @@ export function useLists(boardId?: string): UseLists {
     }
 
     fetchLists();
-  }, [boardId, refreshKey]); // Added refreshKey dependency
+  }, [boardId, refreshKey]);
 
   // Manual refetch function
   const refetch = () => {

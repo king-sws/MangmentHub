@@ -205,7 +205,7 @@ const HelpCenter = () => {
 
   // Article content component
   const ArticleContent = ({ article }: { article: Article }) => (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="max-w-4xl mx-auto pt-20 px-4 sm:px-6 lg:px-8">
       <Button
         onClick={handleBackToCategory}
         variant="ghost"
@@ -346,7 +346,7 @@ const HelpCenter = () => {
       <Button
         onClick={handleBackToCategories}
         variant="ghost"
-        className="mb-8 hover:bg-slate-100 dark:hover:bg-slate-800"
+        className="mb-8 hover:bg-slate-100 pt-20 dark:hover:bg-slate-800"
       >
         <ArrowLeft className="w-4 h-4 mr-2" />
         Back to Help Center

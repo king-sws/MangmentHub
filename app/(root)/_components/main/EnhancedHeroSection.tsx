@@ -48,7 +48,7 @@ const TrustBadges = () => (
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ delay: 0.3, duration: 0.6 }}
-    className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-10"
+    className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-10 "
   >
     {[
       {
@@ -68,7 +68,7 @@ const TrustBadges = () => (
     ].map((item, idx) => (
       <div 
         key={idx} 
-        className={`text-sm border border-slate-200/60 dark:border-slate-700/40 flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-200 hover:border-slate-300/60 dark:hover:border-slate-600/50 ${
+        className={`text-sm border border-slate-200/60 dark:border-slate-700/40 flex items-center gap-2.5 px-4 py-2.5 rounded-lg bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-200 hover:border-slate-300/60 dark:hover:border-slate-600/50 ${
           idx < 2 ? 'hidden lg:flex' : ''
         }`}
       >
@@ -88,7 +88,7 @@ const EnterpriseCTA = () => (
     transition={{ delay: 0.5, duration: 0.6 }}
     className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16"
   >
-    <Button 
+    {/* <Button
       asChild
       size="lg"
       className="group px-10 py-4 bg-gradient-to-b from-[#1e40af] to-[#3b82f6] dark:bg-white text-white dark:text-white hover:from-[#1d4ed8] hover:to-[#2563eb] dark:hover:bg-gray-100 font-semibold text-base transition duration-300 shadow-md hover:shadow-lg"
@@ -97,19 +97,21 @@ const EnterpriseCTA = () => (
         Start Free Trial
         <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
       </Link>
-    </Button>
+    </Button> */}
     
-    <Button 
-      asChild
-      variant="outline"
-      size="lg"
-      className="group px-10 py-4 border-2 border-[#001E80]/30 dark:border-gray-600 text-[#001E80] dark:text-gray-300 hover:bg-[#D2DCFF]/50 dark:hover:bg-gray-800/50 font-semibold text-base"
-    >
-      <Link href="/demo" className="flex items-center gap-2">
-        <Play className="h-4 w-4" />
-        Watch Demo
-      </Link>
-    </Button>
+    <Button
+  asChild
+  size="lg"
+  className="group relative overflow-hidden rounded-lg bg-gradient-to-br from-[#1e3a8a] to-[#3b82f6]
+ dark:from-white dark:to-gray-100 px-10 py-6 text-base font-semibold text-white dark:text-gray-900 shadow-lg hover:from-blue-700 hover:to-blue-600 dark:hover:bg-gray-200 transition-all duration-300 ease-in-out"
+  
+>
+  <Link href="/sign-up" className="flex items-center gap-2">
+    Start Free Trial
+    <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+  </Link>
+</Button>
+
   </motion.div>
 );
 
@@ -118,7 +120,7 @@ const EnterpriseStats = () => (
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ delay: 0.7, duration: 0.6 }}
-    className="grid grid-cols-1 sm:grid-cols-3 gap-8 max-w-4xl mx-auto"
+    className="grid grid-cols-1 sm:grid-cols-3 gap-8 max-w-4xl mx-auto "
   >
     {[
       { number: "10K+", label: "Active Users" },
@@ -166,12 +168,12 @@ const EnterpriseHeroSection = () => {
     <section className="relative w-full min-h-screen flex items-center overflow-hidden pt-20">
       <EnterpriseBackground />
 
-      <div className="relative z-10 max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-20">
+      <div className="relative z-10 max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-10 lg:py-20">
         <motion.div variants={containerVariants} initial="hidden" animate="visible" className="text-center">
           <TrustBadges />
 
           <motion.div variants={itemVariants} className="max-w-5xl mx-auto mb-8">
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-bold text-[#010D3E] dark:text-white leading-[0.9] tracking-tight">
+            <h1 className="text-5xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-bold text-[#010D3E] dark:text-white leading-[0.9] tracking-tight">
               <span className="block mb-3">The Future of</span>
               <span className="block mb-3">Enterprise</span>
               <AnimatePresence mode="wait">
@@ -194,7 +196,7 @@ const EnterpriseHeroSection = () => {
 
           <motion.p 
             variants={itemVariants} 
-            className="text-lg sm:text-xl text-[#010D3E]/80 dark:text-gray-300 max-w-3xl mx-auto leading-relaxed font-normal text-balance mb-12"
+            className="text-base sm:text-xl text-[#010D3E]/80 dark:text-gray-300 max-w-3xl mx-auto leading-relaxed font-normal text-balance mb-12"
           >
             Empower your team with lightning-fast infrastructure, enterprise-grade reliability, and tools they actually want to use.
           </motion.p>

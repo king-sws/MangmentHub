@@ -10,12 +10,12 @@ import { MembersList } from "@/components/MembersList";
 import { SettingsForm } from "./_components/SettingsForm";
 import { NotificationSettings } from "./_components/NotificationSettings";
 import { WorkspaceSettings } from "./_components/WorkspaceSettings";
-import { WorkspaceSelector } from "./_components/WorkspaceSelector";
 import { Building2, User, Users, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import WorkspaceSelector from "./_components/WorkspaceSelector";
 
 export const metadata: Metadata = {
   title: "Account Settings",

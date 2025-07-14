@@ -232,7 +232,7 @@ const SortableCard = memo(function SortableCard({
   const getCardClasses = () => {
     let baseClasses = `
       relative group cursor-pointer rounded-xl border transition-all duration-200 
-      bg-white dark:bg-slate-900 
+      bg-white dark:bg-zinc-900/20
       border-slate-200 dark:border-slate-700 
       hover:border-slate-300 dark:hover:border-slate-600
       hover:shadow-lg dark:hover:shadow-slate-900/50

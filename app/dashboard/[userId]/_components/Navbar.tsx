@@ -324,7 +324,7 @@ export default function Navbar({ user, onToggleSidebar }: { user: User, onToggle
               variant="ghost"
               size="icon"
               onClick={onToggleSidebar}
-              className="h-9 w-9 p-0 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 transition-colors rounded-lg"
+              className="h-9 w-9 p-0 hover:bg-slate-100/80 opacity-0 dark:hover:bg-slate-800/80 transition-colors rounded-lg"
             >
               <Menu className="h-5 w-5 text-slate-600 dark:text-slate-400" />
             </Button>
@@ -735,7 +735,9 @@ export default function Navbar({ user, onToggleSidebar }: { user: User, onToggle
 
     {/* Bottom Items */}
     <div className="space-y-1">
-      <DropdownMenuItem asChild>
+      <DropdownMenuItem asChild onSelect={() => {
+        toast("Feedback section is coming soon! We're working hard to bring you comprehensive help resources.");
+      }}>
         <Link 
           href="/dashboard/feedback" 
           className="w-full px-3 py-2.5 text-left hover:bg-accent transition-all duration-150 flex items-center space-x-3 rounded-md group cursor-pointer"

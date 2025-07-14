@@ -14,16 +14,62 @@ import Image from "next/image";
 import React from "react";
 
 const testimonials = [
-  { text: "As a seasoned designer always on the lookout for innovative tools, Framer.com instantly grabbed my attention.", imageSrc: avatar1.src, name: "Jamie Rivera", username: "@jamietechguru00" },
-  { text: "Our team's productivity has skyrocketed since we started using this tool.", imageSrc: avatar2.src, name: "Josh Smith", username: "@jjsmith" },
-  { text: "This app has completely transformed how I manage my projects and deadlines.", imageSrc: avatar3.src, name: "Morgan Lee", username: "@morganleewhiz" },
-  { text: "I was amazed at how quickly we were able to integrate this app into our workflow.", imageSrc: avatar4.src, name: "Casey Jordan", username: "@caseyj" },
-  { text: "Planning and executing events has never been easier. This app helps me keep track of all the moving parts, ensuring nothing slips through the cracks.", imageSrc: avatar5.src, name: "Taylor Kim", username: "@taylorkimm" },
-  { text: "The customizability and integration capabilities of this app are top-notch.", imageSrc: avatar6.src, name: "Riley Smith", username: "@rileysmith1" },
-  { text: "Adopting this app for our team has streamlined our project management and improved communication across the board.", imageSrc: avatar7.src, name: "Jordan Patels", username: "@jpatelsdesign" },
-  { text: "With this app, we can easily assign tasks, track progress, and manage documents all in one place.", imageSrc: avatar8.src, name: "Sam Dawson", username: "@dawsontechtips" },
-  { text: "Its user-friendly interface and robust features support our diverse needs.", imageSrc: avatar9.src, name: "Casey Harper", username: "@casey09" },
+  {
+    text: "Blutto instantly impressed me with its clean interface and seamless workflow. As a designer, I appreciate tools that are both functional and beautiful.",
+    imageSrc: avatar1.src,
+    name: "Jamie Rivera",
+    username: "@jamietechguru00"
+  },
+  {
+    text: "Since switching to Blutto, our team has seen a massive boost in productivity. Everything just flows better.",
+    imageSrc: avatar2.src,
+    name: "Josh Smith",
+    username: "@jjsmith"
+  },
+  {
+    text: "Blutto completely changed how I manage projects. Deadlines are clearer, tasks are better organized, and nothing gets lost.",
+    imageSrc: avatar3.src,
+    name: "Morgan Lee",
+    username: "@morganleewhiz"
+  },
+  {
+    text: "We integrated Blutto into our team in minutes — and we’ve never looked back. It's intuitive and powerful.",
+    imageSrc: avatar4.src,
+    name: "Casey Jordan",
+    username: "@caseyj"
+  },
+  {
+    text: "Event planning used to be chaotic. With Blutto, I track every detail and deadline effortlessly. It's a game changer.",
+    imageSrc: avatar5.src,
+    name: "Taylor Kim",
+    username: "@taylorkimm"
+  },
+  {
+    text: "Blutto’s custom workflows and integrations fit perfectly into how we already work — no need to change our habits.",
+    imageSrc: avatar6.src,
+    name: "Riley Smith",
+    username: "@rileysmith1"
+  },
+  {
+    text: "Managing multiple projects was a nightmare before Blutto. Now, everything’s in sync and our communication is on point.",
+    imageSrc: avatar7.src,
+    name: "Jordan Patels",
+    username: "@jpatelsdesign"
+  },
+  {
+    text: "Assigning tasks, tracking status, and storing docs in one platform saves us hours each week. Blutto just works.",
+    imageSrc: avatar8.src,
+    name: "Sam Dawson",
+    username: "@dawsontechtips"
+  },
+  {
+    text: "Blutto feels like it was built for us — simple enough for new team members, powerful enough for advanced workflows.",
+    imageSrc: avatar9.src,
+    name: "Casey Harper",
+    username: "@casey09"
+  },
 ];
+
 
 const firstCol = testimonials.slice(0, 3);
 const secondCol = testimonials.slice(3, 6);
@@ -102,10 +148,10 @@ export const Testimonials = () => {
           <div className="inline-block px-4 py-1 text-sm font-medium rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 mb-4">
             Version 2.0 is here
           </div>
-          <h2 className="text-3xl sm:text-5xl font-bold tracking-tight bg-gradient-to-b from-black to-blue-800 dark:from-white dark:to-blue-300 text-transparent bg-clip-text">
+          <h2 className="text-4xl sm:text-5xl font-bold tracking-tight bg-gradient-to-b from-black to-blue-800 dark:from-white dark:to-blue-300 text-transparent bg-clip-text">
             What our users say
           </h2>
-          <p className="mt-4 text-lg text-gray-700 dark:text-gray-300">
+          <p className="mt-4 text-base text-gray-700 dark:text-gray-300">
             From intuitive design to powerful features, our app has become an
             essential tool for users around the world.
           </p>

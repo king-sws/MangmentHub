@@ -131,7 +131,7 @@ function WorkspaceSelectorContent({
             value={selectedWorkspaceId || ""}
             onValueChange={handleWorkspaceChange}
           >
-            <SelectTrigger className="w-full border-0 bg-card hover:bg-accent/50 transition-colors p-3 sm:p-4 lg:p-7 rounded-lg shadow-sm min-h-[60px] sm:min-h-[80px]">
+            <SelectTrigger className="w-full border-0 bg-card hover:bg-accent/50 transition-colors p-3 sm:p-4 lg:p-5 rounded-lg shadow-sm min-h-[60px] sm:min-h-[60px]">
               <SelectValue>
                 {selectedWorkspace ? (
                   <div className="flex items-center gap-2 sm:gap-3 w-full min-w-0">

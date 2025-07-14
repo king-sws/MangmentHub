@@ -236,7 +236,7 @@ const EnterpriseBackground = () => {
   return (
     <div className="absolute inset-0 overflow-hidden">
       {/* Stable gradient background - no flickering */}
-      <div className="absolute inset-0 bg-gradient-to-b from-[#FFFFFF] to-[#D2DCFF] dark:bg-gradient-to-br dark:from-gray-950 dark:via-black dark:to-gray-900" />      
+      <div className="absolute inset-0 bg-gradient-to-b from-[#FFFFFF] to-[#f6f8ff] dark:bg-gradient-to-br dark:from-gray-950 dark:via-black dark:to-gray-900" />      
       {/* Subtle background pattern */}
       <div
         className="absolute inset-0 opacity-[0.015] dark:opacity-[0.03]"
@@ -350,11 +350,11 @@ const EnhancedFeaturesSection = () => {
             <span className="font-medium text-indigo-700 dark:text-indigo-300">Enterprise Interface</span>
           </div>
          
-          <h2 className="text-3xl sm:text-5xl font-bold tracking-tight bg-gradient-to-b from-black to-blue-800 dark:from-white dark:to-blue-300 text-transparent bg-clip-text mb-6 leading-tight">
+          <h2 className="text-4xl sm:text-5xl font-bold tracking-tight bg-gradient-to-b from-black to-blue-800 dark:from-white dark:to-blue-300 text-transparent bg-clip-text mb-6 leading-tight">
             Enterprise-Grade Features
           </h2>
          
-          <p className="text-lg text-gray-700 dark:text-gray-300 max-w-3xl mx-auto leading-relaxed mb-12">
+          <p className="text-base text-gray-700 dark:text-gray-300 max-w-3xl mx-auto leading-relaxed mb-12">
             Experience unparalleled efficiency with our intuitive platform designed for enterprise teams.
             Built for scale, optimized for performance, trusted by industry leaders.
           </p>

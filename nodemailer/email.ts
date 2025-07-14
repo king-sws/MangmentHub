@@ -8,7 +8,7 @@ import transporter from "./nodemailer";
  */
 export const SendWelcomeEmail = async (email: string, name: string): Promise<void> => {
     const mailOptions = {
-        from: `Bluto ${process.env.SENDLER_USER as string}`, // Professional format
+        from: `Blutto ${process.env.SENDLER_USER as string}`, // Professional format
         to: email,
         subject: "Welcome to Our Platform!",
         html: WELCOME_EMAIL_TEMPLATE.replace("{userName}", name)
@@ -74,9 +74,9 @@ export const SendPasswordResetEmail = async (
     
     const mailOptions = {
       // Fix: Use the same format as your working functions
-      from: `"${process.env.EMAIL_FROM_NAME || 'Bluto'}" <${process.env.EMAIL_FROM_ADDRESS || process.env.SENDLER_USER}>`,
+      from: `"${process.env.EMAIL_FROM_NAME || 'Blutto'}" <${process.env.EMAIL_FROM_ADDRESS || process.env.SENDLER_USER}>`,
       to: email,
-      subject: "Reset Your Password - Bluto",
+      subject: "Reset Your Password - Blutto",
       html: `
         <!DOCTYPE html>
         <html>
@@ -93,7 +93,7 @@ export const SendPasswordResetEmail = async (
           <div style="background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
             <h2 style="color: #333; margin-top: 0;">Hello ${name},</h2>
             
-            <p>We received a request to reset your password for your Bluto account. If you didn't make this request, you can safely ignore this email.</p>
+            <p>We received a request to reset your password for your Blutto account. If you didn't make this request, you can safely ignore this email.</p>
             
             <p>To reset your password, click the button below:</p>
             
@@ -121,7 +121,7 @@ export const SendPasswordResetEmail = async (
             
             <p style="color: #666; font-size: 12px; text-align: center;">
               Best regards,<br>
-              The Bluto Team
+              The Blutto Team
             </p>
           </div>
         </body>
@@ -130,7 +130,7 @@ export const SendPasswordResetEmail = async (
       text: `
         Hello ${name},
         
-        We received a request to reset your password for your Bluto account.
+        We received a request to reset your password for your Blutto account.
         
         To reset your password, visit: ${resetUrl}
         
@@ -139,7 +139,7 @@ export const SendPasswordResetEmail = async (
         If you didn't request this, you can safely ignore this email.
         
         Best regards,
-        The Bluto Team
+        The Blutto Team
       `
     };
 

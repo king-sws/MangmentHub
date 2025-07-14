@@ -222,7 +222,7 @@ export default function ChatMessageList({
 
   return (
     <div 
-      className="flex-1 overflow-y-auto p-4 space-y-4 relative bg-stone-50 dark:bg-stone-900"
+      className="flex-1 overflow-y-auto p-4 space-y-4 relative"
       onScroll={handleScroll}
       ref={containerRef}
     >

@@ -47,12 +47,12 @@ const ProductShowcase = () => {
       <div className="relative z-10 flex flex-col items-center text-center">
         {/* Heading + paragraph */}
         <motion.div
-  className="max-w-2xl mx-auto text-center mb-6"
+  className="max-w-2xl px-2 mx-auto text-center mb-6"
 >
   <div className="inline-block px-4 py-1 text-sm font-medium rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 mb-4">
     Enterprise Solution
   </div>
-  <h2 className="text-3xl sm:text-5xl font-bold tracking-tight bg-gradient-to-b from-black to-blue-800 dark:from-white dark:to-blue-300 text-transparent bg-clip-text">
+  <h2 className="text-4xl sm:text-5xl font-bold tracking-tight bg-gradient-to-b from-black to-blue-800 dark:from-white dark:to-blue-300 text-transparent bg-clip-text">
     Enterprise-Grade Interface
   </h2>
   <p className="mt-4 text-lg text-gray-700 dark:text-gray-300">

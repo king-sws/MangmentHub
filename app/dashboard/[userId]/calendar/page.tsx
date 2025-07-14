@@ -61,6 +61,8 @@ import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useSearchParams } from "next/navigation";
 
+
+
 interface Board {
   id: string;
   title: string;
@@ -175,51 +177,73 @@ function CalendarPageContent({ params }: { params: Promise<{ userId: string }> |
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Fetch all boards the user has access to
-  useEffect(() => {
-    const fetchBoards = async () => {
-      try {
-        setIsLoading(true);
-        // Get all workspaces first
-        const wsResponse = await fetch(`/api/workspace?userId=${userId}`);
-        
-        if (!wsResponse.ok) {
-          throw new Error("Failed to fetch workspaces");
-        }
-        
-        const workspaces = await wsResponse.json();
-        const allBoards: Board[] = [];
-        
-        // Fetch boards for each workspace
-        for (const workspace of workspaces) {
-          const boardsResponse = await fetch(`/api/board?workspaceId=${workspace.id}`);
-          
-          if (boardsResponse.ok) {
-            const workspaceBoards = await boardsResponse.json();
-            allBoards.push(...workspaceBoards);
-          }
-        }
-        
-        setBoards(allBoards);
-        
-        // If boardId is in URL params, select that board
-        if (boardIdParam) {
-          const matchingBoard = allBoards.find(board => board.id === boardIdParam);
-          if (matchingBoard) {
-            setSelectedBoard(matchingBoard);
-            // Load the full board data with lists and cards
-            loadFullBoardData(boardIdParam);
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching boards:", error);
-        toast.error("Failed to load boards");
-      } finally {
-        setIsLoading(false);
+// Fetch all boards the user has access to
+useEffect(() => {
+  const fetchBoards = async () => {
+    try {
+      setIsLoading(true);
+      console.log("Fetching workspaces...");
+      const wsResponse = await fetch(`/api/workspaces/user/${userId}`);
+      console.log("Workspaces response:", wsResponse);
+      
+      if (!wsResponse.ok) {
+        console.error("Failed to fetch workspaces", wsResponse.status, wsResponse.statusText);
+        throw new Error("Failed to fetch workspaces");
       }
-    };
-    
-    fetchBoards();
-  }, [userId, boardIdParam]);
+      
+      const workspaces = await wsResponse.json();
+      console.log("Workspaces data:", workspaces);
+
+      const allBoards: Board[] = [];
+      
+      // Fetch boards for each workspace
+      for (const workspace of workspaces) {
+        console.log(`Fetching boards for workspace ${workspace.id}...`);
+        const boardsResponse = await fetch(`/api/board?workspaceId=${workspace.id}`);
+        console.log(`Boards response for ${workspace.id}:`, boardsResponse);
+        
+        if (boardsResponse.ok) {
+          const workspaceBoards = await boardsResponse.json();
+          console.log(`Boards for ${workspace.id}:`, workspaceBoards);
+          
+          // FIX: Access the data property from the response
+          if (workspaceBoards.success && workspaceBoards.data) {
+            allBoards.push(...workspaceBoards.data);
+          } else {
+            console.warn(`No boards data found for workspace ${workspace.id}`);
+          }
+        } else {
+          console.error(`Failed to fetch boards for workspace ${workspace.id}`, boardsResponse.status, boardsResponse.statusText);
+        }
+      }
+      
+      console.log("All boards:", allBoards);
+      setBoards(allBoards);
+      
+      // If boardId is in URL params, select that board
+      if (boardIdParam) {
+        console.log("Board ID from URL:", boardIdParam);
+        const matchingBoard = allBoards.find(board => board.id === boardIdParam);
+        console.log("Matching board:", matchingBoard);
+        
+        if (matchingBoard) {
+          setSelectedBoard(matchingBoard);
+          loadFullBoardData(boardIdParam);
+        }
+      } else if (allBoards.length > 0) {
+        console.log("No board selected - defaulting to first board");
+        handleBoardChange(allBoards[0].id);
+      }
+    } catch (error) {
+      console.error("Error fetching boards:", error);
+      toast.error("Failed to load boards");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  fetchBoards();
+}, [userId, boardIdParam]);
 
   // Load full board data with lists and cards
   const loadFullBoardData = async (boardId: string) => {

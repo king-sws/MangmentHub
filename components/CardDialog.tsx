@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
-import { CalendarIcon, Loader2, Plus, Edit3, Calendar as CalendarDays, Flag } from "lucide-react";
+import { CalendarIcon, Loader2, Plus, Edit3, Calendar as CalendarDays, Flag, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CardStatus } from "@prisma/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -94,34 +94,39 @@ export function CardDialog({
   const [isFocused, setIsFocused] = useState(false);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
+  // Helper function to safely parse dates
+  const parseDate = (dateValue: any): Date | undefined => {
+    if (!dateValue) return undefined;
+    
+    try {
+      let parsedDate: Date;
+      
+      if (typeof dateValue === 'string') {
+        parsedDate = new Date(dateValue);
+      } else if (dateValue instanceof Date) {
+        parsedDate = dateValue;
+      } else {
+        return undefined;
+      }
+      
+      // Check if the date is valid
+      if (isNaN(parsedDate.getTime())) {
+        console.warn("Invalid date detected:", dateValue);
+        return undefined;
+      }
+      
+      return parsedDate;
+    } catch (error) {
+      console.error("Error parsing date:", error);
+      return undefined;
+    }
+  };
+
   useEffect(() => {
     if (isOpen) {
       setTitle(card?.title || "");
       setDescription(card?.description || "");
-      
-      // Fix date handling - properly handle Date objects and strings
-      let initialDate: Date | undefined = undefined;
-      if (card?.dueDate) {
-        try {
-          // Handle both string and Date types
-          if (typeof card.dueDate === 'string') {
-            initialDate = new Date(card.dueDate);
-          } else if (card.dueDate instanceof Date) {
-            initialDate = card.dueDate;
-          }
-          
-          // Validate the date
-          if (initialDate && isNaN(initialDate.getTime())) {
-            console.warn("Invalid date detected, setting to undefined");
-            initialDate = undefined;
-          }
-        } catch (error) {
-          console.error("Error parsing date:", error);
-          initialDate = undefined;
-        }
-      }
-      setDueDate(initialDate);
-      
+      setDueDate(parseDate(card?.dueDate));
       setStatus(card?.status || CardStatus.TODO);
       setPriority(card?.priority);
       setIsDirty(false);
@@ -153,7 +158,7 @@ export function CardDialog({
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape' && !isDatePickerOpen) {
-      onClose();
+      handleClose();
     }
   };
 
@@ -165,18 +170,22 @@ export function CardDialog({
     setIsDatePickerOpen(false);
   };
 
-  const handleClearDate = () => {
+  const handleClearDate = (e: React.MouseEvent) => {
+    e.stopPropagation();
     console.log("Clearing date");
     setDueDate(undefined);
     handleChange();
-    setIsDatePickerOpen(false);
   };
+
+  // Get today's date at midnight for comparison
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent 
         className={cn(
-          "sm:max-w-[580px] w-full max-w-[95vw] max-h-[95vh] mx-auto  sm:mx-4 p-0",
+          "sm:max-w-[580px] w-full max-w-[95vw] max-h-[95vh] mx-auto sm:mx-4 p-0",
           "bg-card text-card-foreground border shadow-xl rounded-xl overflow-hidden",
           "focus:outline-none"
         )}
@@ -340,44 +349,71 @@ export function CardDialog({
                   <Label className="text-sm font-medium text-foreground">
                     Due Date
                   </Label>
-                  <div className="flex gap-2">
-                    <input
-                      type="date"
-                      value={dueDate ? format(dueDate, "yyyy-MM-dd") : ""}
-                      onChange={(e) => {
-                        const selectedDate = e.target.value ? new Date(e.target.value + "T00:00:00") : undefined;
-                        handleDateSelect(selectedDate);
-                      }}
-                      min={format(new Date(), "yyyy-MM-dd")}
-                      disabled={isLoading}
-                      className={cn(
-                        "flex-1 h-10 px-3 text-sm rounded-lg border transition-all duration-200",
-                        "bg-background border-input text-foreground",
-                        "hover:border-input/80 focus:border-ring focus:ring-2 focus:ring-ring/20 focus:outline-none",
-                        isLoading && "opacity-50 cursor-not-allowed",
-                        "[&::-webkit-calendar-picker-indicator]:cursor-pointer",
-                        "dark:[&::-webkit-calendar-picker-indicator]:filter dark:[&::-webkit-calendar-picker-indicator]:invert"
-                      )}
-                    />
-                    {dueDate && (
-                      <Button 
+                  <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
                         type="button"
-                        variant="outline" 
-                        size="sm"
-                        onClick={handleClearDate}
-                        disabled={isLoading}
                         className={cn(
-                          "h-10 px-3 rounded-lg border transition-all duration-200",
-                          "bg-background border-input text-muted-foreground hover:text-foreground",
-                          "hover:bg-accent hover:border-input/80 focus:border-ring focus:ring-2 focus:ring-ring/20 focus:outline-none",
+                          "w-full h-10 justify-start text-left font-normal",
+                          "bg-background border-input text-foreground",
+                          "hover:border-input/80 focus:border-ring focus:ring-2 focus:ring-ring/20 focus:outline-none",
+                          !dueDate && "text-muted-foreground",
                           isLoading && "opacity-50 cursor-not-allowed"
                         )}
-                        title="Clear date"
+                        disabled={isLoading}
                       >
-                        ×
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {dueDate ? format(dueDate, "PPP") : "Pick a date"}
                       </Button>
-                    )}
-                  </div>
+                    </PopoverTrigger>
+                    <PopoverContent 
+                      className="w-auto p-0 bg-popover border-border shadow-lg" 
+                      align="start"
+                      side="bottom"
+                      sideOffset={4}
+                    >
+                      <Calendar
+                        mode="single"
+                        selected={dueDate}
+                        onSelect={handleDateSelect}
+                        disabled={(date) => {
+                          // Disable dates before today
+                          const dateToCheck = new Date(date);
+                          dateToCheck.setHours(0, 0, 0, 0);
+                          return dateToCheck < today;
+                        }}
+                        initialFocus
+                        className="bg-popover text-popover-foreground rounded-lg border-0"
+                        classNames={{
+                          months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
+                          month: "space-y-4",
+                          caption: "flex justify-center pt-1 relative items-center",
+                          caption_label: "text-sm font-medium",
+                          nav: "space-x-1 flex items-center",
+                          nav_button: cn(
+                            "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100"
+                          ),
+                          nav_button_previous: "absolute left-1",
+                          nav_button_next: "absolute right-1",
+                          table: "w-full border-collapse space-y-1",
+                          head_row: "flex",
+                          head_cell: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
+                          row: "flex w-full mt-2",
+                          cell: "text-center text-sm p-0 relative [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+                          day: cn(
+                            "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-accent hover:text-accent-foreground rounded-md"
+                          ),
+                          day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
+                          day_today: "bg-accent text-accent-foreground",
+                          day_outside: "text-muted-foreground opacity-50",
+                          day_disabled: "text-muted-foreground opacity-50 cursor-not-allowed",
+                          day_range_middle: "aria-selected:bg-accent aria-selected:text-accent-foreground",
+                          day_hidden: "invisible",
+                        }}
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </div>
 

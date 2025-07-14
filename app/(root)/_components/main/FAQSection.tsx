@@ -193,7 +193,7 @@ const FAQSection: React.FC<FAQSectionProps> = ({
             {badgeText}
           </div>
          
-          <h2 className="text-3xl mb-6 sm:text-5xl font-bold tracking-tight bg-gradient-to-b from-black to-blue-800 dark:from-white dark:to-blue-300 text-transparent bg-clip-text">
+          <h2 className="text-4xl mb-6 sm:text-5xl font-bold tracking-tight bg-gradient-to-b from-black to-blue-800 dark:from-white dark:to-blue-300 text-transparent bg-clip-text">
             Frequently Asked Questions
           </h2>
          

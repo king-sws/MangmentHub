@@ -1,3 +1,5 @@
+// Fixed version of your AnalyticsView component
+
 "use client";
 
 import { useState, useEffect, SetStateAction } from "react";
@@ -9,6 +11,7 @@ import { DateRangePicker } from "./date-range-picker";
 import { TeamPerformance } from "./team-performance";
 import { Loader2 } from "lucide-react";
 import { ProductivityTrends } from "./productivity-trends";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Workspace {
   id: string;
@@ -96,27 +99,38 @@ export const AnalyticsView = () => {
     fetchAnalytics();
   }, [dateRange, activeTab]);
 
-  // Separate effect for user analytics
+  // Fixed user analytics effect
   useEffect(() => {
     const fetchUserAnalytics = async () => {
       if (activeTab !== "user") return;
       
       setIsLoading(true);
       try {
-        // Build URL with query parameters
-        const url = new URL(`/api/analytics/user`, window.location.origin);
+        // Fixed: Use relative URL instead of absolute URL
+        let url = `/api/analytics/user`;
+        const params = new URLSearchParams();
         
-        if (dateRange.from) url.searchParams.append('startDate', dateRange.from.toISOString());
-        if (dateRange.to) url.searchParams.append('endDate', dateRange.to.toISOString());
+        if (dateRange.from) params.append('startDate', dateRange.from.toISOString());
+        if (dateRange.to) params.append('endDate', dateRange.to.toISOString());
         
-        const response = await fetch(url.toString());
+        if (params.toString()) {
+          url += `?${params.toString()}`;
+        }
+        
+        console.log("Fetching user analytics from:", url); // Debug log
+        
+        const response = await fetch(url);
         if (!response.ok) {
-          throw new Error(`Failed to fetch user analytics: ${response.status}`);
+          const errorText = await response.text();
+          console.error("User analytics error response:", errorText);
+          throw new Error(`Failed to fetch user analytics: ${response.status} - ${errorText}`);
         }
         const data = await response.json();
+        console.log("User analytics data:", data); // Debug log
         setUserAnalytics(data);
       } catch (error) {
         console.error("Failed to fetch user analytics:", error);
+        setUserAnalytics(null); // Reset on error
       } finally {
         setIsLoading(false);
       }
@@ -167,9 +181,13 @@ export const AnalyticsView = () => {
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
-    // Only set isLoading to true for tabs that need to fetch data
-    if (["overview", "workspace", "user"].includes(value)) {
-      setIsLoading(true);
+    // Reset data when changing tabs to avoid showing stale data
+    if (value === "overview") {
+      setAnalytics(null);
+    } else if (value === "workspace") {
+      setWorkspaceAnalytics(null);
+    } else if (value === "user") {
+      setUserAnalytics(null);
     }
   };
 
@@ -234,18 +252,18 @@ export const AnalyticsView = () => {
             
             <TabsContent value="workspace" className="mt-0">
               <div className="mb-4 sm:mb-6">
-                <select 
-                  className="w-full sm:max-w-xs p-2 sm:p-3 border rounded-md bg-transparent text-sm sm:text-base"
-                  value={selectedWorkspace || ""}
-                  onChange={(e) => handleWorkspaceChange(e.target.value)}
-                >
-                  <option value="" disabled>Select a workspace</option>
-                  {workspaces.map((workspace) => (
-                    <option key={workspace.id} value={workspace.id}>
-                      {workspace.name}
-                    </option>
-                  ))}
-                </select>
+                <Select value={selectedWorkspace || ""} onValueChange={handleWorkspaceChange}>
+        <SelectTrigger className="w-full sm:max-w-xs">
+          <SelectValue placeholder="Select a workspace" />
+        </SelectTrigger>
+        <SelectContent>
+          {workspaces.map((workspace) => (
+            <SelectItem key={workspace.id} value={workspace.id}>
+              {workspace.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
               </div>
               {isLoading ? (
                 <div className="h-48 sm:h-64 flex items-center justify-center">

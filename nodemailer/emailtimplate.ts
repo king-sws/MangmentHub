@@ -2,9 +2,9 @@ export const WELCOME_EMAIL_TEMPLATE = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Welcome to Bookify!</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Welcome to Blutto!</title>
   <style>
     body {
       font-family: 'Inter', 'Helvetica Neue', sans-serif;
@@ -111,48 +111,50 @@ export const WELCOME_EMAIL_TEMPLATE = `
 <body>
   <div class="email-container">
     <div class="header">
-      <h1>Welcome to Bookify ✨ </h1>
+      <h1>Welcome to Blutto ✨</h1>
     </div>
     <div class="body">
       <p>Hello {userName},</p>
-      <p>Welcome to <span class="highlight">Bookify</span> – your personal gateway to a world of knowledge and imagination!</p>
-     
+      <p>We're excited to welcome you to <span class="highlight">Blutto</span> — your modern workspace for team productivity and collaboration.</p>
+
       <div class="features">
         <div class="feature-item">
-          <span class="feature-icon">📚</span>
-          <span>Access our curated collection of premium books and articles</span>
+          <span class="feature-icon">📋</span>
+          <span>Manage tasks visually with smart Kanban boards</span>
         </div>
         <div class="feature-item">
-          <span class="feature-icon">🔖</span>
-          <span>Create personalized reading lists and track your progress</span>
+          <span class="feature-icon">💬</span>
+          <span>Communicate effortlessly with integrated team chat</span>
         </div>
         <div class="feature-item">
-          <span class="feature-icon">💫</span>
-          <span>Discover new titles with our AI-powered recommendation engine</span>
+          <span class="feature-icon">📈</span>
+          <span>Track your progress with real-time analytics dashboards</span>
         </div>
         <div class="feature-item">
-          <span class="feature-icon">🌙</span>
-          <span>Enjoy comfortable reading with our customizable dark mode</span>
+          <span class="feature-icon">👥</span>
+          <span>Invite team members and assign roles with ease</span>
         </div>
       </div>
       
-      <p>Your literary journey begins now:</p>
+      <p>Get started with your first board now:</p>
       <center>
-        <a href="{libraryLink}" class="cta-button">Explore Your Library</a>
+        <a href="{dashboardLink}" class="cta-button">Launch Your Workspace</a>
       </center>
-      <p>Looking for something specific? Our <a href="{helpCenterLink}">Help Center</a> can guide you through all of Bookify's features.</p>
+      
+      <p>Need help getting set up? Visit our <a href="{helpCenterLink}">Help Center</a> for quick guides and tutorials.</p>
      
-      <p>Happy reading!<br>
-      <span class="highlight">The Bookify Team</span></p>
+      <p>Let's build something great together 🚀<br>
+      <span class="highlight">– The Blutto Team</span></p>
     </div>
     <div class="footer">
-      <p>© 2025 Bookify. All rights reserved.</p>
+      <p>© 2025 Blutto. All rights reserved.</p>
       <p>This email was sent to {userEmail}. <a href="{unsubscribeLink}" style="color: #6c7793;">Manage preferences</a></p>
     </div>
   </div>
 </body>
 </html>
-`
+`;
+
 
 export const INVITATION_EMAIL_TEMPLATE = `
 <!DOCTYPE html>

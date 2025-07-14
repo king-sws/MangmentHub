@@ -11,6 +11,15 @@ import { PlanIndicator } from './_components/PlanIndicator'
 import { MobileNav } from './_components/MobileNav'
 import Link from 'next/link'
 
+// app/dashboard/[userId]/workspace/[workspaceId]/layout.tsx
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Workspace | Blutto',
+  description: 'Your centralized workspace in Blutto. Manage boards, tasks, teams, and settings—all in one place.',
+  keywords: ['Blutto', 'Workspace', 'Team collaboration', 'Boards', 'Tasks', 'Project management', 'Work hub'],
+};
+
 
 interface WorkspaceLayoutProps {
   children: ReactNode

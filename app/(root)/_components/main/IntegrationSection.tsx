@@ -172,11 +172,11 @@ const ModernIntegrations = () => {
       <MdOutlineStar className="inline mr-1" />               
       Integrations             
     </div>             
-    <h2 className='text-3xl sm:text-5xl font-bold tracking-tight bg-gradient-to-b from-black to-blue-800 dark:from-white dark:to-blue-300 text-transparent bg-clip-text mt-4'>               
+    <h2 className='text-4xl sm:text-5xl font-bold tracking-tight bg-gradient-to-b from-black to-blue-800 dark:from-white dark:to-blue-300 text-transparent bg-clip-text mt-4'>               
       Connect your                
       <span className='block'> favorite tools</span>             
     </h2>             
-    <p className='mt-4 text-lg text-gray-700 dark:text-gray-300'>               
+    <p className='mt-4 text-base text-gray-700 dark:text-gray-300'>               
       Seamlessly integrate with your workflow. Automate updates, sync tasks, and align teams effortlessly.             
     </p>             
     <div className="flex items-center justify-center lg:justify-start gap-6 mt-6 text-sm text-gray-600 dark:text-gray-400">               

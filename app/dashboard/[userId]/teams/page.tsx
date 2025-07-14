@@ -13,6 +13,9 @@ import { getWorkspaces } from "@/actions/workspace";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
+
+
+
 // Define the state interface
 interface ChatPageState {
   workspaces: any[];
@@ -274,7 +277,7 @@ export default function ChatPage() {
           </button>
           
           {isWorkspaceDropdownOpen && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-lg z-40 max-h-60 overflow-y-auto">
+            <div className="absolute top-full left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-lg z-[9999] max-h-60 overflow-y-auto">
               {workspaces.length > 0 ? (
                 workspaces.map(workspace => (
                   <button
@@ -328,7 +331,7 @@ export default function ChatPage() {
       {/* Mobile sidebar overlay */}
       {isSidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          className="fixed inset-0 bg-black/50 z-[9998] md:hidden"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
@@ -337,8 +340,8 @@ export default function ChatPage() {
       <div
         id="chat-sidebar"
         className={cn(
-          "w-64 h-full transition-transform duration-300 ease-in-out z-30",
-          "md:relative md:translate-x-0",
+          "w-64 h-full transition-transform duration-300 ease-in-out z-[9999]",
+          "md:relative md:translate-x-0 md:z-auto",
           "fixed left-0 top-0",
           isSidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}

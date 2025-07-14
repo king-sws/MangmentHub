@@ -18,9 +18,32 @@ const geistMono = Geist_Mono({
 
 
 export const metadata: Metadata = {
-  title: 'Blutto',
-  description: 'Complete workspace management platform with task management, team chat, analytics dashboard, Kanban boards, calendar integration, and collaborative workspace features with member invitations',
-}
+  title: 'Blutto – Enterprise Workspace Management Platform',
+  description:
+    'Blutto is a modern SaaS platform for teams. Manage tasks with Kanban boards and calendar views, collaborate via team chat, track analytics, and control access with role-based permissions — all in one unified workspace.',
+  keywords: [
+    'Blutto',
+    'workspace management',
+    'SaaS platform',
+    'Kanban boards',
+    'task management',
+    'team collaboration',
+    'calendar integration',
+    'enterprise tools',
+    'project tracking',
+    'team productivity'
+  ],
+  openGraph: {
+    title: 'Blutto – Enterprise Workspace Management Platform',
+    description:
+      'All-in-one platform for collaborative task management, team chat, and enterprise-grade project tracking. Built for performance, security, and scale.',
+    url: 'https://blutto.vercel.app',
+    siteName: 'Blutto',
+
+    type: 'website',
+  },
+};
+
 
 function AuthProvider({ children }: { children: React.ReactNode }) {
   return <SessionProvider>{children}</SessionProvider>;

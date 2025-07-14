@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { Calendar } from "lucide-react";
-import { format } from "date-fns";
 
 // UI Components
 import {
@@ -63,9 +62,11 @@ interface NewTaskDialogProps {
 
 export function NewTaskDialog({ open, onOpenChange, onTaskCreated }: NewTaskDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   
   // Fetch available boards
-  const { boards, isLoading: isBoardsLoading } = useBoards();
+  const { boards, isLoading: isBoardsLoading, error: boardsError } = useBoards();
   
   // Get form
   const form = useForm<TaskFormValues>({
@@ -74,40 +75,57 @@ export function NewTaskDialog({ open, onOpenChange, onTaskCreated }: NewTaskDial
       title: "",
       description: "",
       status: "TODO",
+      boardId: "",
+      listId: "",
     },
   });
   
   // Watch boardId to fetch lists when it changes
   const selectedBoardId = form.watch("boardId");
-  const { lists, isLoading: isListsLoading } = useLists(selectedBoardId);
+  const { lists, isLoading: isListsLoading, error: listsError } = useLists(selectedBoardId);
   
   // Reset form when dialog is closed
   useEffect(() => {
     if (!open) {
       form.reset();
+      setSubmitError(null);
+      setIsCalendarOpen(false);
     }
   }, [open, form]);
+  
+  // Clear listId when board changes
+  useEffect(() => {
+    if (selectedBoardId) {
+      form.setValue("listId", "");
+    }
+  }, [selectedBoardId, form]);
   
   // Handle form submission
   const onSubmit = async (values: TaskFormValues) => {
     try {
       setIsSubmitting(true);
+      setSubmitError(null);
+      
+      // Prepare the payload
+      const payload = {
+        title: values.title,
+        description: values.description || "",
+        status: values.status,
+        // Format date properly for API
+        dueDate: values.dueDate ? values.dueDate.toISOString() : null,
+      };
       
       const response = await fetch(`/api/lists/${values.listId}/cards`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          title: values.title,
-          description: values.description || "",
-          dueDate: values.dueDate,
-          status: values.status,
-        }),
+        body: JSON.stringify(payload),
       });
       
       if (!response.ok) {
-        throw new Error("Failed to create task");
+        const errorText = await response.text();
+        throw new Error(`Failed to create task: ${response.status} ${errorText}`);
       }
       
       // Call the onTaskCreated callback to trigger a refetch in the parent component
@@ -119,13 +137,22 @@ export function NewTaskDialog({ open, onOpenChange, onTaskCreated }: NewTaskDial
       onOpenChange(false);
     } catch (error) {
       console.error("Error creating task:", error);
+      setSubmitError(error instanceof Error ? error.message : "Failed to create task");
     } finally {
       setIsSubmitting(false);
     }
   };
-  
-  // Debug logging - remove this once fixed
-  console.log("Boards data:", boards, "Type:", typeof boards, "Is array:", Array.isArray(boards));
+
+  // Format date for display
+  const formatDate = (date: Date | undefined) => {
+    if (!date) return "Pick a date";
+    return date.toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -139,6 +166,13 @@ export function NewTaskDialog({ open, onOpenChange, onTaskCreated }: NewTaskDial
         
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {/* Error Message */}
+            {submitError && (
+              <div className="text-sm text-red-600 bg-red-50 p-2 rounded">
+                {submitError}
+              </div>
+            )}
+            
             {/* Title */}
             <FormField
               control={form.control}
@@ -167,10 +201,11 @@ export function NewTaskDialog({ open, onOpenChange, onTaskCreated }: NewTaskDial
                   <FormLabel>Description</FormLabel>
                   <FormControl>
                     <Textarea 
-                      placeholder="Task description" 
+                      placeholder="Task description (optional)" 
                       {...field} 
                       value={field.value || ""}
                       disabled={isSubmitting}
+                      rows={3}
                     />
                   </FormControl>
                   <FormMessage />
@@ -196,16 +231,24 @@ export function NewTaskDialog({ open, onOpenChange, onTaskCreated }: NewTaskDial
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {/* Safe array check and fallback */}
-                      {Array.isArray(boards) && boards.length > 0 ? (
+                      {/* Handle loading and error states */}
+                      {isBoardsLoading ? (
+                        <SelectItem value="loading" disabled>
+                          Loading boards...
+                        </SelectItem>
+                      ) : boardsError ? (
+                        <SelectItem value="error" disabled>
+                          Error loading boards
+                        </SelectItem>
+                      ) : Array.isArray(boards) && boards.length > 0 ? (
                         boards.map((board) => (
                           <SelectItem key={board.id} value={board.id}>
                             {board.title}
                           </SelectItem>
                         ))
                       ) : (
-                        <SelectItem value="No boards" disabled>
-                          {isBoardsLoading ? "Loading boards..." : "No boards available"}
+                        <SelectItem value="no-boards" disabled>
+                          No boards available
                         </SelectItem>
                       )}
                     </SelectContent>
@@ -233,16 +276,28 @@ export function NewTaskDialog({ open, onOpenChange, onTaskCreated }: NewTaskDial
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {/* Safe array check for lists too */}
-                      {Array.isArray(lists) && lists.length > 0 ? (
+                      {/* Handle loading and error states */}
+                      {isListsLoading ? (
+                        <SelectItem value="loading" disabled>
+                          Loading lists...
+                        </SelectItem>
+                      ) : listsError ? (
+                        <SelectItem value="error" disabled>
+                          Error loading lists
+                        </SelectItem>
+                      ) : !selectedBoardId ? (
+                        <SelectItem value="no-board" disabled>
+                          Please select a board first
+                        </SelectItem>
+                      ) : Array.isArray(lists) && lists.length > 0 ? (
                         lists.map((list) => (
                           <SelectItem key={list.id} value={list.id}>
                             {list.title}
                           </SelectItem>
                         ))
                       ) : (
-                        <SelectItem value="No boards" disabled>
-                          {isListsLoading ? "Loading lists..." : "No lists available"}
+                        <SelectItem value="no-lists" disabled>
+                          No lists available
                         </SelectItem>
                       )}
                     </SelectContent>
@@ -258,8 +313,8 @@ export function NewTaskDialog({ open, onOpenChange, onTaskCreated }: NewTaskDial
               name="dueDate"
               render={({ field }) => (
                 <FormItem className="flex flex-col">
-                  <FormLabel>Due Date</FormLabel>
-                  <Popover>
+                  <FormLabel>Due Date (Optional)</FormLabel>
+                  <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
                     <PopoverTrigger asChild>
                       <FormControl>
                         <Button
@@ -268,17 +323,27 @@ export function NewTaskDialog({ open, onOpenChange, onTaskCreated }: NewTaskDial
                             !field.value && "text-muted-foreground"
                           }`}
                           disabled={isSubmitting}
+                          type="button"
                         >
                           <Calendar className="mr-2 h-4 w-4" />
-                          {field.value ? format(field.value, "PPP") : "Pick a date"}
+                          {formatDate(field.value)}
                         </Button>
                       </FormControl>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
+                    <PopoverContent 
+  className="w-auto p-0 z-9999" 
+  align="start"
+  side="bottom"
+  sideOffset={4}
+>
                       <CalendarComponent
                         mode="single"
                         selected={field.value}
-                        onSelect={field.onChange}
+                        onSelect={(date) => {
+                          field.onChange(date);
+                          setIsCalendarOpen(false);
+                        }}
+                        disabled={(date) => date < new Date("1900-01-01")}
                         initialFocus
                       />
                     </PopoverContent>
@@ -297,7 +362,7 @@ export function NewTaskDialog({ open, onOpenChange, onTaskCreated }: NewTaskDial
                   <FormLabel>Status</FormLabel>
                   <Select 
                     onValueChange={field.onChange} 
-                    defaultValue={field.value}
+                    value={field.value}
                     disabled={isSubmitting}
                   >
                     <FormControl>
@@ -308,6 +373,7 @@ export function NewTaskDialog({ open, onOpenChange, onTaskCreated }: NewTaskDial
                     <SelectContent>
                       <SelectItem value="TODO">To Do</SelectItem>
                       <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
+                      <SelectItem value="IN_REVIEW">In Review</SelectItem>
                       <SelectItem value="DONE">Done</SelectItem>
                     </SelectContent>
                   </Select>
@@ -317,6 +383,14 @@ export function NewTaskDialog({ open, onOpenChange, onTaskCreated }: NewTaskDial
             />
             
             <DialogFooter>
+              <Button 
+                type="button" 
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </Button>
               <Button 
                 type="submit" 
                 disabled={isSubmitting}
